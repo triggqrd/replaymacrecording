@@ -3,9 +3,17 @@ import VideoToolbox
 @preconcurrency import CoreMedia
 import CoreVideo
 
-public enum VideoCodec {
+public enum VideoCodec: Sendable {
     case hevc
     case h264
+}
+
+public struct VideoEncoderConfiguration: Equatable, Sendable {
+    public let width: Int
+    public let height: Int
+    public let fps: Int
+    public let codec: VideoCodec
+    public let bitrate: Int
 }
 
 public enum VideoEncoderError: Error {
@@ -32,6 +40,7 @@ public final class VideoEncoder: @unchecked Sendable {
     private var compressionSession: VTCompressionSession?
     private let stateLock = NSLock()
     private var _outputHandler: OutputHandler?
+    private var _currentConfiguration: VideoEncoderConfiguration?
     private var expectedPTSQueue: [CMTime] = []
     private var encodeCount: Int64 = 0
 
@@ -49,6 +58,12 @@ public final class VideoEncoder: @unchecked Sendable {
     }
 
     public init() {}
+
+    public var currentConfiguration: VideoEncoderConfiguration? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return _currentConfiguration
+    }
 
     deinit {
         if compressionSession != nil {
@@ -72,6 +87,8 @@ public final class VideoEncoder: @unchecked Sendable {
         case .h264:
             codecType = kCMVideoCodecType_H264
         }
+
+        print("[ENCODE] Starting \(codec) encoder: \(width)x\(height) @ \(fps) fps, bitrate=\(bitrate) bps")
 
         var encoderSpecification: CFDictionary?
         if codec == .h264 {
@@ -126,6 +143,13 @@ public final class VideoEncoder: @unchecked Sendable {
 
         stateLock.lock()
         compressionSession = session
+        _currentConfiguration = VideoEncoderConfiguration(
+            width: width,
+            height: height,
+            fps: fps,
+            codec: codec,
+            bitrate: bitrate
+        )
         stateLock.unlock()
     }
 
@@ -167,6 +191,7 @@ public final class VideoEncoder: @unchecked Sendable {
         stateLock.lock()
         let session = compressionSession
         compressionSession = nil
+        _currentConfiguration = nil
         expectedPTSQueue.removeAll()
         encodeCount = 0
         stateLock.unlock()

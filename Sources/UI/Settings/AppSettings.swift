@@ -192,7 +192,7 @@ public extension Defaults.Keys {
     static let customCaptureWidth = Key<Int>("customCaptureWidth", default: 1920)
     static let customCaptureHeight = Key<Int>("customCaptureHeight", default: 1080)
     static let frameRate = Key<Int>("frameRate", default: 60)
-    static let bitrateMbps = Key<Double>("bitrateMbps", default: 20)
+    static let bitrateMbps = Key<Double>("bitrateMbps", default: 25)
     static let qualityPreset = Key<String>("qualityPreset", default: QualityPreset.quality.rawValue)
 
     static let captureSystemAudio = Key<Bool>("captureSystemAudio", default: true)

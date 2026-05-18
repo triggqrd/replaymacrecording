@@ -41,6 +41,9 @@ public struct SettingsView: View {
     @State private var microphones: [MicrophoneOption] = []
     @State private var launchAtLoginError: String?
     @State private var displayLoadError: String?
+    @State private var bitrateSliderValue = Defaults[.bitrateMbps]
+    @State private var bitrateSliderIsEditing = false
+    @State private var isApplyingQualityPreset = false
 
     private var dualDisplayOptions: [DisplayOption] {
         displays.filter { $0.id != captureDisplayID }
@@ -75,23 +78,37 @@ public struct SettingsView: View {
         .onChange(of: qualityPresetRawValue) { _, newValue in
             applyQualityPresetIfNeeded(newValue)
         }
+        .onChange(of: videoCodecRawValue) { _, _ in
+            updateBitrateForCurrentPresetIfNeeded()
+        }
         .onChange(of: captureResolutionRawValue) { _, _ in
-            markQualityPresetAsCustom()
+            markQualityPresetAsCustomIfNeeded()
         }
         .onChange(of: frameRate) { _, _ in
-            markQualityPresetAsCustom()
+            markQualityPresetAsCustomIfNeeded()
         }
-        .onChange(of: bitrateMbps) { _, _ in
-            markQualityPresetAsCustom()
+        .onChange(of: bitrateMbps) { _, newValue in
+            if !bitrateSliderIsEditing {
+                bitrateSliderValue = newValue
+            }
+            markQualityPresetAsCustomIfNeeded()
         }
         .onChange(of: launchAtLogin) { _, newValue in
             applyLaunchAtLogin(newValue)
         }
         .onChange(of: captureModeRawValue) { _, _ in
             validateDisplay2Selection()
+            updateBitrateForCurrentPresetIfNeeded()
         }
         .onChange(of: captureDisplayID) { _, _ in
             validateDisplay2Selection()
+            updateBitrateForCurrentPresetIfNeeded()
+        }
+        .onChange(of: captureDisplayID2) { _, _ in
+            updateBitrateForCurrentPresetIfNeeded()
+        }
+        .onChange(of: dualCaptureSaveModeRawValue) { _, _ in
+            updateBitrateForCurrentPresetIfNeeded()
         }
     }
 
@@ -224,12 +241,24 @@ public struct SettingsView: View {
                     HStack {
                         Text("Bitrate")
                         Spacer()
-                        Text("\(Int(bitrateMbps)) Mbps")
+                        Text(bitrateValueLabel)
                             .foregroundStyle(AppTheme.accent)
                             .fontWeight(.semibold)
                     }
-                    Slider(value: $bitrateMbps, in: 10...50, step: 1)
+                    Slider(
+                        value: $bitrateSliderValue,
+                        in: 10...50,
+                        step: 1,
+                        onEditingChanged: handleBitrateSliderEditingChanged
+                    )
                         .tint(AppTheme.accent)
+                    HStack(spacing: 8) {
+                        Label(bitrateScopeLabel, systemImage: "info.circle")
+                        Spacer()
+                        Text(recommendedBitrateLabel)
+                    }
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .font(.system(size: 12, design: .rounded))
                 }
 
                 Picker("Quality preset", selection: $qualityPresetRawValue) {
@@ -242,7 +271,7 @@ public struct SettingsView: View {
             }
 
             Section {
-                Label("Most changes apply automatically.", systemImage: "bolt.circle")
+                Label("Encoding changes apply automatically and reset the video replay buffer.", systemImage: "bolt.circle")
                     .foregroundStyle(AppTheme.textSecondary)
                     .font(.system(size: 12, design: .rounded))
             }
@@ -394,6 +423,22 @@ public struct SettingsView: View {
         return "\(Int(memoryCapMB)) MB"
     }
 
+    private var bitrateValueLabel: String {
+        "\(Int(bitrateSliderValue)) Mbps"
+    }
+
+    private var bitrateScopeLabel: String {
+        if captureModeRawValue == CaptureMode.dualSideBySide.rawValue,
+           dualCaptureSaveModeRawValue == DualCaptureSaveMode.separateFiles.rawValue {
+            return "Applies per display file"
+        }
+        return "Applies to the saved video stream"
+    }
+
+    private var recommendedBitrateLabel: String {
+        "Recommended: \(Int(recommendedBitrateMbps())) Mbps"
+    }
+
     private func chooseOutputDirectory() {
         let panel = NSOpenPanel()
         panel.title = "Choose Clip Output Folder"
@@ -419,28 +464,167 @@ public struct SettingsView: View {
             return
         }
 
+        isApplyingQualityPreset = true
+
         switch preset {
         case .performance:
             captureResolutionRawValue = CaptureResolution.half.rawValue
             frameRate = 30
-            bitrateMbps = 15
+            bitrateMbps = recommendedBitrateMbps(
+                preset: .performance,
+                resolutionRawValue: CaptureResolution.half.rawValue,
+                frameRate: 30
+            )
         case .quality:
             captureResolutionRawValue = CaptureResolution.native.rawValue
             frameRate = 60
-            bitrateMbps = 25
+            bitrateMbps = recommendedBitrateMbps(
+                preset: .quality,
+                resolutionRawValue: CaptureResolution.native.rawValue,
+                frameRate: 60
+            )
         case .ultra:
             captureResolutionRawValue = CaptureResolution.native.rawValue
             frameRate = 120
-            bitrateMbps = 40
+            bitrateMbps = recommendedBitrateMbps(
+                preset: .ultra,
+                resolutionRawValue: CaptureResolution.native.rawValue,
+                frameRate: 120
+            )
         case .custom:
             break
         }
+
+        bitrateSliderValue = bitrateMbps
+        finishApplyingQualityPresetOnNextRunLoop()
     }
 
-    private func markQualityPresetAsCustom() {
-        if qualityPresetRawValue != QualityPreset.custom.rawValue {
+    private func markQualityPresetAsCustomIfNeeded() {
+        if !isApplyingQualityPreset && qualityPresetRawValue != QualityPreset.custom.rawValue {
             qualityPresetRawValue = QualityPreset.custom.rawValue
         }
+    }
+
+    private func updateBitrateForCurrentPresetIfNeeded() {
+        guard let preset = QualityPreset(rawValue: qualityPresetRawValue),
+              preset != .custom,
+              !isApplyingQualityPreset else {
+            return
+        }
+
+        isApplyingQualityPreset = true
+        bitrateMbps = recommendedBitrateMbps(
+            preset: preset,
+            resolutionRawValue: captureResolutionRawValue,
+            frameRate: frameRate
+        )
+        bitrateSliderValue = bitrateMbps
+        finishApplyingQualityPresetOnNextRunLoop()
+    }
+
+    private func finishApplyingQualityPresetOnNextRunLoop() {
+        Task { @MainActor in
+            isApplyingQualityPreset = false
+        }
+    }
+
+    private func handleBitrateSliderEditingChanged(_ isEditing: Bool) {
+        bitrateSliderIsEditing = isEditing
+
+        if !isEditing {
+            commitBitrateSliderValue()
+        }
+    }
+
+    private func commitBitrateSliderValue() {
+        let committedValue = Double(Int(bitrateSliderValue.rounded()))
+        bitrateSliderValue = committedValue
+
+        guard bitrateMbps != committedValue else { return }
+        bitrateMbps = committedValue
+    }
+
+    private func recommendedBitrateMbps() -> Double {
+        recommendedBitrateMbps(
+            preset: QualityPreset(rawValue: qualityPresetRawValue) ?? .quality,
+            resolutionRawValue: captureResolutionRawValue,
+            frameRate: frameRate
+        )
+    }
+
+    private func recommendedBitrateMbps(
+        preset: QualityPreset,
+        resolutionRawValue: String,
+        frameRate: Int
+    ) -> Double {
+        guard preset != .custom else {
+            return bitrateSliderValue
+        }
+
+        let dimensions = effectiveVideoDimensions(resolutionRawValue: resolutionRawValue)
+        let referencePixels = Double(2560 * 1440)
+        let pixelScale = max(Double(dimensions.width * dimensions.height) / referencePixels, 0.25)
+        let fpsScale = max(Double(frameRate) / 60.0, 0.5)
+        let codecScale = videoCodecRawValue == VideoCodec.h264.rawValue ? 1.3 : 1.0
+
+        let baseMbps: Double
+        switch preset {
+        case .performance:
+            baseMbps = 18
+        case .quality:
+            baseMbps = 25
+        case .ultra:
+            baseMbps = 40
+        case .custom:
+            baseMbps = bitrateSliderValue
+        }
+
+        let recommendation = (baseMbps * pixelScale * fpsScale * codecScale).rounded()
+        return min(max(recommendation, 10), 50)
+    }
+
+    private func effectiveVideoDimensions(resolutionRawValue: String) -> (width: Int, height: Int) {
+        let display1 = displays.first { $0.id == captureDisplayID } ?? displays.first
+        let display2 = displays.first { $0.id == captureDisplayID2 }
+        let nativeWidth = display1?.width ?? 2560
+        let nativeHeight = display1?.height ?? 1440
+
+        let singleDimensions: (width: Int, height: Int)
+        switch resolutionRawValue {
+        case CaptureResolution.half.rawValue:
+            singleDimensions = (nativeWidth / 2, nativeHeight / 2)
+        case CaptureResolution.custom.rawValue:
+            singleDimensions = (customCaptureWidth, customCaptureHeight)
+        default:
+            singleDimensions = (nativeWidth, nativeHeight)
+        }
+
+        guard captureModeRawValue == CaptureMode.dualSideBySide.rawValue else {
+            return singleDimensions
+        }
+
+        let secondNativeWidth = display2?.width ?? nativeWidth
+        let secondNativeHeight = display2?.height ?? nativeHeight
+        let secondDimensions: (width: Int, height: Int)
+        switch resolutionRawValue {
+        case CaptureResolution.half.rawValue:
+            secondDimensions = (secondNativeWidth / 2, secondNativeHeight / 2)
+        case CaptureResolution.custom.rawValue:
+            secondDimensions = (customCaptureWidth, customCaptureHeight)
+        default:
+            secondDimensions = (secondNativeWidth, secondNativeHeight)
+        }
+
+        if dualCaptureSaveModeRawValue == DualCaptureSaveMode.separateFiles.rawValue {
+            return singleDimensions.width * singleDimensions.height >= secondDimensions.width * secondDimensions.height
+                ? singleDimensions
+                : secondDimensions
+        }
+
+        return (
+            width: singleDimensions.width + secondDimensions.width,
+            height: max(singleDimensions.height, secondDimensions.height)
+        )
     }
 
     private func syncLaunchAtLoginState() {
@@ -485,7 +669,9 @@ public struct SettingsView: View {
             let options = shareableContent.displays.map { display in
                 DisplayOption(
                     id: String(display.displayID),
-                    name: "Display \(display.displayID) (\(display.width)x\(display.height))"
+                    name: "Display \(display.displayID) (\(display.width)x\(display.height))",
+                    width: Int(display.width),
+                    height: Int(display.height)
                 )
             }
 
@@ -519,6 +705,8 @@ public struct SettingsView: View {
 private struct DisplayOption: Identifiable, Hashable {
     let id: String
     let name: String
+    let width: Int
+    let height: Int
 }
 
 private struct MicrophoneOption: Identifiable, Hashable {

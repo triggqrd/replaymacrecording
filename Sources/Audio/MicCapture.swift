@@ -1,11 +1,14 @@
 import Foundation
 @preconcurrency import AVFoundation
 @preconcurrency import CoreMedia
+import CoreAudio
 
 public enum MicCaptureError: Error {
     case cannotCreateTargetFormat
     case cannotCreateFormatDescription(OSStatus)
     case engineStartFailed(Error)
+    case deviceNotFound
+    case cannotSetInputDevice(OSStatus)
 }
 
 /// Captures microphone audio via AVAudioEngine and emits CMSampleBuffers
@@ -40,7 +43,11 @@ public final class MicCapture: @unchecked Sendable {
         lock.unlock()
     }
 
-    public func start() throws {
+    public func start(deviceID: String? = nil) throws {
+        if let deviceID, !deviceID.isEmpty {
+            try setInputDevice(uid: deviceID)
+        }
+
         let input = engine.inputNode
         let inputFormat = input.inputFormat(forBus: 0)
 
@@ -76,6 +83,9 @@ public final class MicCapture: @unchecked Sendable {
 
         print("[MIC] input format: \(inputFormat) channels=\(inputFormat.channelCount) sr=\(inputFormat.sampleRate)")
         print("[MIC] output format: 48kHz float32 interleaved \(channelCount)ch")
+        if let deviceID, !deviceID.isEmpty {
+            print("[MIC] selected device UID: \(deviceID)")
+        }
 
         input.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, time in
             self?.handleInput(buffer: buffer, time: time)
@@ -96,6 +106,98 @@ public final class MicCapture: @unchecked Sendable {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         isRunning = false
+
+        lock.lock()
+        firstBufferHostTime = nil
+        totalOutputFrames = 0
+        lock.unlock()
+    }
+
+    private func setInputDevice(uid: String) throws {
+        guard let audioDeviceID = Self.audioDeviceID(forUID: uid) else {
+            throw MicCaptureError.deviceNotFound
+        }
+
+        guard let inputUnit = engine.inputNode.audioUnit else {
+            throw MicCaptureError.deviceNotFound
+        }
+
+        var deviceID = audioDeviceID
+        let status = AudioUnitSetProperty(
+            inputUnit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &deviceID,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+        guard status == noErr else {
+            throw MicCaptureError.cannotSetInputDevice(status)
+        }
+    }
+
+    private static func audioDeviceID(forUID uid: String) -> AudioDeviceID? {
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var dataSize: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(
+            AudioObjectID(kAudioObjectSystemObject),
+            &propertyAddress,
+            0,
+            nil,
+            &dataSize
+        ) == noErr else {
+            return nil
+        }
+
+        let deviceCount = Int(dataSize) / MemoryLayout<AudioDeviceID>.size
+        var deviceIDs = [AudioDeviceID](repeating: 0, count: deviceCount)
+        guard AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &propertyAddress,
+            0,
+            nil,
+            &dataSize,
+            &deviceIDs
+        ) == noErr else {
+            return nil
+        }
+
+        for deviceID in deviceIDs {
+            guard let deviceUID = deviceUID(for: deviceID), deviceUID == uid else {
+                continue
+            }
+            return deviceID
+        }
+
+        return nil
+    }
+
+    private static func deviceUID(for deviceID: AudioDeviceID) -> String? {
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceUID,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var propertySize: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(deviceID, &propertyAddress, 0, nil, &propertySize) == noErr else {
+            return nil
+        }
+
+        var uid: CFString?
+        let status = withUnsafeMutablePointer(to: &uid) { pointer in
+            AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, nil, &propertySize, pointer)
+        }
+        guard status == noErr, let uid else {
+            return nil
+        }
+
+        return uid as String
     }
 
     private func handleInput(buffer: AVAudioPCMBuffer, time: AVAudioTime) {
@@ -153,12 +255,6 @@ public final class MicCapture: @unchecked Sendable {
         let sampleRate = pcmBuffer.format.sampleRate
         let frameCount = CMItemCount(pcmBuffer.frameLength)
 
-        // Anchor PTS to the first buffer's host time (SCK video clock domain),
-        // then derive subsequent PTS by accumulating frame counts. This
-        // produces bit-exact contiguous timestamps driven by the audio sample
-        // clock — host-time stamping each buffer independently leaves
-        // sub-millisecond gaps/overlaps at boundaries that AAC renders as
-        // audible clicks at the ~10Hz buffer cadence.
         lock.lock()
         if firstBufferHostTime == nil {
             firstBufferHostTime = CMClockMakeHostTimeFromSystemUnits(audioTime.hostTime)
@@ -223,5 +319,4 @@ public final class MicCapture: @unchecked Sendable {
         guard status == noErr else { return nil }
         return sampleBuffer
     }
-
 }

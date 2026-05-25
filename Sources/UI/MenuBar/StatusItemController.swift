@@ -8,11 +8,13 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
     private var hostingView: NSHostingView<StatusBadgeView>?
     private var state = MenuBarState()
     private var saveItem: NSMenuItem?
+    private var toggleRecordingItem: NSMenuItem?
     private var libraryItem: NSMenuItem?
     private var bufferUsageItem: NSMenuItem?
     private var hotkeyHintItem: NSMenuItem?
 
     public var onSaveClip: (() -> Void)?
+    public var onToggleRecording: (() -> Void)?
     public var onOpenClipLibrary: (() -> Void)?
     public var onOpenSettings: (() -> Void)?
     public var onQuit: (() -> Void)?
@@ -28,6 +30,12 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         configureButton(for: item)
         configureMenu(for: item)
         statusItem = item
+        refreshPresentation()
+    }
+
+    public func refreshPresentation() {
+        refreshMenuItems()
+        updateTooltip()
     }
 
     private func configureButton(for item: NSStatusItem) {
@@ -37,7 +45,6 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
         button.image = nil
         button.title = ""
-        button.toolTip = "ReplayMac"
 
         button.subviews.forEach { $0.removeFromSuperview() }
 
@@ -71,6 +78,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         hotkeyHintItem.isEnabled = false
         menu.addItem(hotkeyHintItem)
 
+        let toggleRecordingItem = NSMenuItem(title: "", action: #selector(toggleRecording), keyEquivalent: "")
+        toggleRecordingItem.target = self
+        menu.addItem(toggleRecordingItem)
+
         let libraryItem = NSMenuItem(title: "Clip Library", action: #selector(openClipLibrary), keyEquivalent: "")
         libraryItem.target = self
         menu.addItem(libraryItem)
@@ -90,6 +101,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         menu.addItem(quitItem)
 
         self.saveItem = saveItem
+        self.toggleRecordingItem = toggleRecordingItem
         self.libraryItem = libraryItem
         self.bufferUsageItem = bufferUsageItem
         self.hotkeyHintItem = hotkeyHintItem
@@ -98,15 +110,37 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
     }
 
     public func menuWillOpen(_ menu: NSMenu) {
-        refreshMenuItems()
+        refreshPresentation()
     }
 
     private func refreshMenuItems() {
         let replaySeconds = AppSettings.bufferDurationSeconds
         saveItem?.title = "Save Last \(replaySeconds) Seconds"
+        saveItem?.isEnabled = state.isRecording && state.bufferedSeconds >= SavePreflight.minimumBufferedSeconds
+
+        toggleRecordingItem?.title = state.isRecording ? "Stop Recording" : "Start Recording"
+
         libraryItem?.title = "Clip Library"
-        bufferUsageItem?.title = "Buffer: \(state.formattedBufferDuration) / \(state.formattedBufferMemory)"
+
+        let capLabel = MenuBarState.formattedDuration(TimeInterval(replaySeconds))
+        var bufferLine = "Buffer: \(state.formattedBufferDuration) / \(capLabel) · \(state.formattedBufferMemory)"
+        if state.isRecording && state.bufferedSeconds < TimeInterval(replaySeconds) {
+            bufferLine += " (filling…)"
+        }
+        bufferUsageItem?.title = bufferLine
+
         hotkeyHintItem?.isHidden = hasSaveHotkeyConfigured
+    }
+
+    private func updateTooltip() {
+        guard let button = statusItem?.button else { return }
+
+        let capLabel = MenuBarState.formattedDuration(TimeInterval(AppSettings.bufferDurationSeconds))
+        if state.isRecording {
+            button.toolTip = "ReplayMac — Recording \(state.formattedBufferDuration)/\(capLabel)"
+        } else {
+            button.toolTip = "ReplayMac — Not recording"
+        }
     }
 
     private func updateStatusItemWidth(_ contentWidth: CGFloat) {
@@ -116,6 +150,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
     @objc private func saveClip() {
         onSaveClip?()
+    }
+
+    @objc private func toggleRecording() {
+        onToggleRecording?()
     }
 
     @objc private func openSettings() {
@@ -161,23 +199,38 @@ private struct StatusBadgeView: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            if state.isSaving {
+            switch state.saveStatus {
+            case .saving:
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 12, height: 12)
+                Text("Saving…")
+                    .foregroundStyle(AppTheme.accent)
+            case .saved:
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(AppTheme.success)
-                    .transition(.scale.combined(with: .opacity))
                 Text("Saved")
                     .foregroundStyle(AppTheme.success)
-            } else if state.isRecording {
-                ZStack {
-                    Circle()
-                        .fill(AppTheme.danger)
-                        .frame(width: 8, height: 8)
-                        .pulsingDot()
+            case .failed:
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(AppTheme.danger)
+                Text("Failed")
+                    .foregroundStyle(AppTheme.danger)
+            case .idle:
+                if state.isRecording {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.danger)
+                            .frame(width: 8, height: 8)
+                            .pulsingDot()
+                    }
+                    .frame(width: 12, height: 12)
+                    Text(state.formattedBufferDuration)
+                        .foregroundStyle(AppTheme.textPrimary)
+                } else {
+                    Image(systemName: "record.circle")
+                        .foregroundStyle(AppTheme.accent)
                 }
-                .frame(width: 12, height: 12)
-            } else {
-                Image(systemName: "record.circle")
-                    .foregroundStyle(AppTheme.accent)
             }
         }
         .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -194,17 +247,25 @@ private struct StatusBadgeView: View {
             }
         )
         .onPreferenceChange(StatusWidthPreferenceKey.self, perform: onWidthChange)
-        .animation(.easeOut(duration: 0.2), value: state.isSaving)
+        .animation(.easeOut(duration: 0.2), value: state.saveStatus)
         .animation(.easeOut(duration: 0.2), value: state.isRecording)
+        .animation(.easeOut(duration: 0.2), value: state.bufferedSeconds)
     }
 
     private var backgroundColor: Color {
-        if state.isSaving {
+        switch state.saveStatus {
+        case .saved:
             return AppTheme.success.opacity(0.12)
-        } else if state.isRecording {
+        case .failed:
             return AppTheme.danger.opacity(0.12)
+        case .saving:
+            return AppTheme.accent.opacity(0.12)
+        case .idle:
+            if state.isRecording {
+                return AppTheme.danger.opacity(0.12)
+            }
+            return AppTheme.accent.opacity(0.10)
         }
-        return AppTheme.accent.opacity(0.10)
     }
 }
 

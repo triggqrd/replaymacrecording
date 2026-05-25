@@ -9,11 +9,18 @@ public final class VideoRingBuffer: @unchecked Sendable {
     private var _currentMemoryBytes: Int = 0
 
     public var timeCap: TimeInterval
-    public let memoryCap: Int
+    public private(set) var memoryCap: Int
 
     public init(timeCap: TimeInterval = 30.0, memoryCap: Int = 1_500_000_000) {
         self.timeCap = timeCap
         self.memoryCap = memoryCap
+    }
+
+    public func setMemoryCap(_ bytes: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        memoryCap = max(bytes, 0)
+        evictIfNeeded()
     }
 
     public func append(encodedSample: CMSampleBuffer) {

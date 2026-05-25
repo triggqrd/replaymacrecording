@@ -63,7 +63,8 @@ let package = Package(
             path: "Sources/Audio",
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
-                .linkedFramework("CoreMedia")
+                .linkedFramework("CoreMedia"),
+                .linkedFramework("CoreAudio")
             ]
         ),
         .target(
@@ -98,6 +99,7 @@ let package = Package(
         .testTarget(name: "RingBufferTests", dependencies: ["RingBuffer"], path: "Tests/RingBufferTests"),
         .testTarget(name: "EncoderTests", dependencies: ["Encode"], path: "Tests/EncoderTests"),
         .testTarget(name: "SavePipelineTests", dependencies: ["Save", "RingBuffer"], path: "Tests/SavePipelineTests"),
-        .testTarget(name: "CaptureTests", dependencies: ["Capture"], path: "Tests/CaptureTests")
+        .testTarget(name: "CaptureTests", dependencies: ["Capture"], path: "Tests/CaptureTests"),
+        .testTarget(name: "UITests", dependencies: ["UI"], path: "Tests/UITests")
     ]
 )

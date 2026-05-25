@@ -90,10 +90,44 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
     }
 
     public func showSaveFailedNotification(error: String) {
+        showOperationalNotification(title: "Clip Save Failed", body: error)
+    }
+
+    public func showOperationalNotification(title: String, body: String) {
         guard let center else { return }
+
+        center.getNotificationSettings { [weak self] settings in
+            guard let self, let center = self.center else {
+                return
+            }
+
+            guard settings.authorizationStatus != .denied else {
+                print("Notifications are disabled for ReplayMac in System Settings.")
+                return
+            }
+
+            if settings.authorizationStatus == .notDetermined {
+                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                    guard granted else {
+                        return
+                    }
+                    self.postOperationalNotification(center: center, title: title, body: body)
+                }
+                return
+            }
+
+            self.postOperationalNotification(center: center, title: title, body: body)
+        }
+    }
+
+    private func postOperationalNotification(
+        center: UNUserNotificationCenter,
+        title: String,
+        body: String
+    ) {
         let content = UNMutableNotificationContent()
-        content.title = "Clip Save Failed"
-        content.body = error
+        content.title = title
+        content.body = body
         content.sound = .default
 
         let request = UNNotificationRequest(
@@ -103,7 +137,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         )
         center.add(request) { addError in
             if let addError {
-                print("Failed to post clip failure notification: \(addError.localizedDescription)")
+                print("Failed to post operational notification: \(addError.localizedDescription)")
             }
         }
     }

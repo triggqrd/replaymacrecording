@@ -394,4 +394,35 @@ final class RingBufferTests: XCTestCase {
         XCTAssertGreaterThan(duration, 15)
         XCTAssertLessThanOrEqual(duration, 31)
     }
+
+    func testVideoRingBufferSetMemoryCapEvictsExistingSamples() {
+        let buffer = VideoRingBuffer(timeCap: 100.0, memoryCap: 10_000)
+
+        for i in 0..<20 {
+            let pts = Double(i)
+            let isKeyframe = (i % 5 == 0)
+            buffer.append(encodedSample: Self.makeSampleBuffer(pts: pts, isKeyframe: isKeyframe, sampleSize: 1000))
+        }
+
+        XCTAssertGreaterThan(buffer.currentMemoryBytes, 5000)
+
+        buffer.setMemoryCap(5000)
+
+        XCTAssertLessThanOrEqual(buffer.currentMemoryBytes, 5000)
+    }
+
+    func testAudioRingBufferSetMemoryCapEvictsExistingSamples() {
+        let buffer = AudioRingBuffer(timeCap: 100.0, memoryCap: 10_000)
+
+        for i in 0..<20 {
+            let pts = Double(i)
+            buffer.append(Self.makeSampleBuffer(pts: pts, isKeyframe: true, sampleSize: 1000))
+        }
+
+        XCTAssertGreaterThan(buffer.currentMemoryBytes, 5000)
+
+        buffer.setMemoryCap(5000)
+
+        XCTAssertLessThanOrEqual(buffer.currentMemoryBytes, 5000)
+    }
 }

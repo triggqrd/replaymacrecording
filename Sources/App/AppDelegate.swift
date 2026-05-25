@@ -65,6 +65,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     private var originalDualWidth2: Int = 0
     private var originalDualHeight2: Int = 0
     private var lastMicEnabled = AppSettings.captureMicrophone
+    private var lastMicDeviceID = AppSettings.microphoneID
+    private var hasNotifiedMicDenied = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NotificationManager.shared.requestAuthorization()
@@ -73,6 +75,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
         statusItemController.onSaveClip = { [weak self] in
             self?.saveClipFromUI()
+        }
+        statusItemController.onToggleRecording = { [weak self] in
+            self?.toggleCapturePipeline()
         }
         statusItemController.onOpenClipLibrary = { [weak self] in
             self?.openClipLibraryWindow()
@@ -104,6 +109,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         }
 
         setupSettingsObservations()
+        syncMemoryCapsToSettings()
 
         DispatchQueue.main.async { [weak self] in
             self?.updateActivationPolicy(bringVisibleWindowToFront: true)
@@ -170,6 +176,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         })
         settingsObservations.append(Defaults.observe(.captureMicrophone) { [weak self] _ in
             self?.scheduleRuntimeSettingsReconcile()
+        })
+        settingsObservations.append(Defaults.observe(.microphoneID) { [weak self] _ in
+            self?.scheduleRuntimeSettingsReconcile()
+        })
+        settingsObservations.append(Defaults.observe(.memoryCapMB) { [weak self] _ in
+            self?.syncMemoryCapsToSettings()
+        })
+        settingsObservations.append(Defaults.observe(.captureSystemAudio) { [weak self] _ in
+            self?.syncMemoryCapsToSettings()
         })
         settingsObservations.append(Defaults.observe(.dualCaptureSaveMode) { [weak self] _ in
             self?.scheduleRuntimeSettingsReconcile()
@@ -268,7 +283,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 let shouldCaptureMic = AppSettings.captureMicrophone
                 let micPermissionGranted = shouldCaptureMic ? await requestMicrophonePermissionIfNeeded() : false
                 if shouldCaptureMic && !micPermissionGranted {
-                    print("Warning: Microphone permission denied; mic track will be unavailable.")
+                    notifyMicPermissionDeniedIfNeeded()
                 }
 
                 let isDual = AppSettings.captureMode == CaptureMode.dualSideBySide.rawValue
@@ -344,6 +359,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     )
 
                     isDualMode = true
+                    syncMemoryCapsToSettings()
 
                     print("Dual capture started: Display1=\(originalDualWidth1)x\(originalDualHeight1) -> \(scaled1.width)x\(scaled1.height), Display2=\(originalDualWidth2)x\(originalDualHeight2) -> \(scaled2.width)x\(scaled2.height), Composite=\(compositeWidth)x\(compositeHeight)")
                 } else {
@@ -385,6 +401,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     )
 
                     isDualMode = false
+                    syncMemoryCapsToSettings()
 
                     print("Single capture started: Display=\(originalDisplayWidth)x\(originalDisplayHeight) -> \(scaled.width)x\(scaled.height)")
                 }
@@ -394,18 +411,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
                 if shouldCaptureMic && micPermissionGranted {
                     do {
-                        try micAudioCapture.start()
+                        try micAudioCapture.start(deviceID: AppSettings.microphoneID)
+                        lastMicDeviceID = AppSettings.microphoneID
                     } catch {
                         print("Warning: Failed to start mic capture: \(error)")
+                        NotificationManager.shared.showOperationalNotification(
+                            title: "Microphone Unavailable",
+                            body: error.localizedDescription
+                        )
                     }
                 }
 
                 isCaptureRunning = true
                 menuBarState.setRecording(true)
+                statusItemController.refreshPresentation()
                 startMonitoring()
         } catch {
+            if !userInitiated,
+               !UserDefaults.standard.bool(forKey: "hasPromptedForScreenCapture") {
+                UserDefaults.standard.set(true, forKey: "hasPromptedForScreenCapture")
+                await startCapturePipelineAsync(userInitiated: true)
+                return
+            }
+
             isCaptureRunning = false
             menuBarState.setRecording(false)
+            statusItemController.refreshPresentation()
+            let message = CaptureStartErrorMapper.userMessage(for: error)
+            NotificationManager.shared.showOperationalNotification(title: message.title, body: message.body)
             print("Failed to start capture: \(error)")
         }
     }
@@ -436,6 +469,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         isCaptureRunning = false
         menuBarState.setRecording(false)
         menuBarState.setBufferedSeconds(0)
+        statusItemController.refreshPresentation()
     }
 
     private func toggleCapturePipeline() {
@@ -640,7 +674,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
     private func applyMicSettingIfNeeded() async {
         let shouldCaptureMic = AppSettings.captureMicrophone
-        guard shouldCaptureMic != lastMicEnabled else { return }
+        let selectedMicDeviceID = AppSettings.microphoneID
+        let micSettingsChanged = shouldCaptureMic != lastMicEnabled || selectedMicDeviceID != lastMicDeviceID
+        guard micSettingsChanged else { return }
 
         if shouldCaptureMic {
             let micPermissionGranted = await requestMicrophonePermissionIfNeeded()
@@ -648,19 +684,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 micAudioCapture.stop()
                 micAudioRingBuffer.clear()
                 do {
-                    try micAudioCapture.start()
+                    try micAudioCapture.start(deviceID: selectedMicDeviceID)
                     lastMicEnabled = true
+                    lastMicDeviceID = selectedMicDeviceID
                 } catch {
                     print("Warning: Failed to restart mic capture: \(error)")
+                    NotificationManager.shared.showOperationalNotification(
+                        title: "Microphone Unavailable",
+                        body: error.localizedDescription
+                    )
                 }
             } else {
-                print("Warning: Microphone permission denied.")
+                notifyMicPermissionDeniedIfNeeded()
             }
         } else {
             micAudioCapture.stop()
             micAudioRingBuffer.clear()
             lastMicEnabled = false
+            lastMicDeviceID = selectedMicDeviceID
         }
+    }
+
+    private func notifyMicPermissionDeniedIfNeeded() {
+        guard !hasNotifiedMicDenied else { return }
+        hasNotifiedMicDenied = true
+        NotificationManager.shared.showOperationalNotification(
+            title: "Microphone Access Denied",
+            body: "Clips will not include a microphone track. Enable microphone access in System Settings → Privacy & Security → Microphone."
+        )
     }
 
     private func restartFullPipeline() async {
@@ -739,7 +790,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     }
 
     private func saveConfiguredClip(lastSeconds: TimeInterval) async {
-        menuBarState.flashSavedState()
+        if let failure = SavePreflight.failure(
+            isRecording: isCaptureRunning,
+            bufferedSeconds: menuBarState.bufferedSeconds,
+            saveInProgress: menuBarState.isSaveInProgress
+        ) {
+            if failure != .saveInProgress {
+                let message = SavePreflight.notificationMessage(for: failure)
+                NotificationManager.shared.showOperationalNotification(title: message.title, body: message.body)
+                menuBarState.showSaveFailedBriefly()
+            }
+            return
+        }
+
+        guard menuBarState.beginSaving() else {
+            return
+        }
+        statusItemController.refreshPresentation()
 
         do {
             let isSeparateDualSave = AppSettings.captureMode == CaptureMode.dualSideBySide.rawValue
@@ -749,30 +816,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
             let finalURLs: [URL]
             if isSeparateDualSave {
-                let savedURLs = try await clipSaver.saveDualDisplayClips(
+                finalURLs = try await clipSaver.saveDualDisplayClips(
                     lastSeconds: lastSeconds,
                     outputDirectory: outputDirectory
                 )
-                var watermarkedURLs: [URL] = []
-                for url in savedURLs {
-                    let finalURL = try await WatermarkCompositor.applyIfEnabled(
-                        to: url,
-                        enabled: AppSettings.watermarkSavedClips
-                    )
-                    watermarkedURLs.append(finalURL)
-                }
-                finalURLs = watermarkedURLs
             } else {
                 let savedURL = try await clipSaver.saveClip(
                     lastSeconds: lastSeconds,
                     outputDirectory: outputDirectory
                 )
-                let finalURL = try await WatermarkCompositor.applyIfEnabled(
-                    to: savedURL,
-                    enabled: AppSettings.watermarkSavedClips
-                )
-                finalURLs = [finalURL]
+                finalURLs = [savedURL]
             }
+
+            menuBarState.finishSaving(success: true)
+            statusItemController.refreshPresentation()
 
             if AppSettings.playAudioCueOnSave {
                 AudioCue.playSaveSuccess()
@@ -783,11 +840,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             }
             print("Clip saved: \(finalURLs.map(\.path).joined(separator: ", "))")
         } catch {
-            if AppSettings.showNotificationOnSave {
-                NotificationManager.shared.showSaveFailedNotification(error: error.localizedDescription)
-            }
+            menuBarState.finishSaving(success: false)
+            statusItemController.refreshPresentation()
+            NotificationManager.shared.showSaveFailedNotification(error: error.localizedDescription)
             print("Failed to save clip: \(error)")
         }
+    }
+
+    private func syncMemoryCapsToSettings() {
+        let dualMode = AppSettings.captureMode == CaptureMode.dualSideBySide.rawValue
+        let caps = AppSettings.ringBufferMemoryCaps(
+            isDualMode: dualMode,
+            captureSystemAudio: AppSettings.captureSystemAudio,
+            captureMicrophone: AppSettings.captureMicrophone
+        )
+
+        videoRingBuffer.setMemoryCap(caps.videoPerBuffer)
+        dualDisplay1VideoRingBuffer.setMemoryCap(caps.videoPerBuffer)
+        dualDisplay2VideoRingBuffer.setMemoryCap(caps.videoPerBuffer)
+        systemAudioRingBuffer.setMemoryCap(caps.audioPerBuffer)
+        micAudioRingBuffer.setMemoryCap(caps.audioPerBuffer)
     }
 
     private func syncBufferDurationToSettings() {
@@ -824,6 +896,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
                 let videoDuration = self.videoRingBuffer.duration
                 self.menuBarState.setBufferedSeconds(videoDuration)
+                self.statusItemController.refreshPresentation()
 
                 guard tick % 5 == 0 else {
                     continue
@@ -864,14 +937,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         switch interruption {
         case .restartedAfterGPUPressure:
             menuBarState.setRecording(true)
-        case .gpuPressurePaused:
-            stopCapturePipeline()
-        case .permissionRevoked:
-            stopCapturePipeline()
-        case .displayDisconnected:
-            stopCapturePipeline()
-        case .stopped(let reason):
-            print("Capture stopped: \(reason)")
+            if let message = interruption.userMessage {
+                NotificationManager.shared.showOperationalNotification(title: message.title, body: message.body)
+            }
+        case .gpuPressurePaused, .permissionRevoked, .displayDisconnected, .stopped:
+            if let message = interruption.userMessage {
+                NotificationManager.shared.showOperationalNotification(title: message.title, body: message.body)
+            }
+            if case .stopped(let reason) = interruption {
+                print("Capture stopped: \(reason)")
+            }
             stopCapturePipeline()
         }
     }
@@ -901,23 +976,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         systemAudioMemory: Int,
         micAudioMemory: Int
     ) {
-        let capBytes = Int(AppSettings.memoryCapMB * 1024 * 1024)
-        if totalRingMemory > capBytes {
-            let targetVideoBytes = max(0, capBytes - dualDisplay1Memory - dualDisplay2Memory - systemAudioMemory - micAudioMemory)
-            let evictedVideo = videoRingBuffer.evictToMemory(maxBytes: targetVideoBytes)
-            var remainingBudget = max(0, capBytes - videoRingBuffer.currentMemoryBytes - systemAudioMemory - micAudioMemory)
-            let evictedDisplay1 = dualDisplay1VideoRingBuffer.evictToMemory(maxBytes: remainingBudget / 2)
-            remainingBudget = max(0, remainingBudget - dualDisplay1VideoRingBuffer.currentMemoryBytes)
-            let evictedDisplay2 = dualDisplay2VideoRingBuffer.evictToMemory(maxBytes: remainingBudget)
+        _ = totalRingMemory
+        _ = dualDisplay1Memory
+        _ = dualDisplay2Memory
+        _ = systemAudioMemory
+        _ = micAudioMemory
 
-            remainingBudget = max(0, capBytes - videoRingBuffer.currentMemoryBytes - dualDisplay1VideoRingBuffer.currentMemoryBytes - dualDisplay2VideoRingBuffer.currentMemoryBytes)
-            let targetSystemBytes = remainingBudget / 2
-            let evictedSystem = systemAudioRingBuffer.evictToMemory(maxBytes: targetSystemBytes)
-            remainingBudget = max(0, remainingBudget - systemAudioRingBuffer.currentMemoryBytes)
-            let evictedMic = micAudioRingBuffer.evictToMemory(maxBytes: remainingBudget)
-
-            print("Memory cap exceeded. Evicted video=\(evictedVideo)B display1=\(evictedDisplay1)B display2=\(evictedDisplay2)B systemAudio=\(evictedSystem)B mic=\(evictedMic)B")
-        }
+        // Per-buffer memory caps are enforced inside each ring buffer via setMemoryCap().
+        // Keep this hook for system-wide memory pressure trimming only.
 
         if let availableMemory = Self.estimatedAvailableMemoryBytes(),
            availableMemory < 512 * 1024 * 1024 {

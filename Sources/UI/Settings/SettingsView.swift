@@ -35,7 +35,6 @@ public struct SettingsView: View {
     @Default(.queueDepth) private var queueDepth
     @Default(.playAudioCueOnSave) private var playAudioCueOnSave
     @Default(.showNotificationOnSave) private var showNotificationOnSave
-    @Default(.watermarkSavedClips) private var watermarkSavedClips
 
     @State private var displays: [DisplayOption] = []
     @State private var microphones: [MicrophoneOption] = []
@@ -333,9 +332,8 @@ public struct SettingsView: View {
                             Text(microphone.name).tag(microphone.id)
                         }
                     }
-                    .disabled(true)
 
-                    Label("ReplayMac currently records from the macOS default input device.", systemImage: "info.circle")
+                    Label("Changing mic restarts the mic track; recording continues.", systemImage: "info.circle")
                         .foregroundStyle(AppTheme.textSecondary)
                         .font(.system(size: 12, design: .rounded))
                 }
@@ -386,6 +384,10 @@ public struct SettingsView: View {
                         .tint(AppTheme.accent)
                 }
 
+                Label("Total memory shared across all replay buffers. Lower values evict oldest footage sooner.", systemImage: "info.circle")
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .font(.system(size: 12, design: .rounded))
+
                 Stepper(value: $queueDepth, in: 3...10) {
                     Text("SCK queue depth: \(queueDepth)")
                 }
@@ -396,7 +398,6 @@ public struct SettingsView: View {
             Section {
                 Toggle("Play audio cue on save", isOn: $playAudioCueOnSave)
                 Toggle("Show notification on save", isOn: $showNotificationOnSave)
-                Toggle("Watermark saved clips", isOn: $watermarkSavedClips)
             } header: {
                 sectionHeader(icon: "speaker.wave.2.bubble.left", title: "Feedback")
             }

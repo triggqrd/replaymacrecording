@@ -165,6 +165,37 @@ public enum AppSettings {
     public static var excludeOwnAppAudio: Bool { Defaults[.excludeOwnAppAudio] }
     public static var microphoneID: String { Defaults[.microphoneID] }
 
+    public static func ringBufferMemoryCaps(
+        isDualMode: Bool,
+        captureSystemAudio: Bool,
+        captureMicrophone: Bool,
+        totalCapMB: Double = memoryCapMB
+    ) -> (videoPerBuffer: Int, audioPerBuffer: Int) {
+        let totalBytes = Int(totalCapMB * 1024 * 1024)
+        let videoBufferCount = max(isDualMode ? 3 : 1, 1)
+
+        var audioBufferCount = 0
+        if captureSystemAudio {
+            audioBufferCount += 1
+        }
+        if captureMicrophone {
+            audioBufferCount += 1
+        }
+
+        let videoPool = Int(Double(totalBytes) * 0.85)
+        let audioPool = totalBytes - videoPool
+
+        let minimumVideoBytes = 32 * 1024 * 1024
+        let minimumAudioBytes = 8 * 1024 * 1024
+
+        let videoPerBuffer = max(minimumVideoBytes, videoPool / videoBufferCount)
+        let audioPerBuffer = audioBufferCount > 0
+            ? max(minimumAudioBytes, audioPool / audioBufferCount)
+            : minimumAudioBytes
+
+        return (videoPerBuffer, audioPerBuffer)
+    }
+
     public static func scaledDimensions(displayWidth: Int, displayHeight: Int) -> (width: Int, height: Int) {
         switch captureResolution {
         case CaptureResolution.half.rawValue:

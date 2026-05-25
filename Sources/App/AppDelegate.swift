@@ -7,7 +7,6 @@ import Save
 import UI
 import Hotkeys
 import Feedback
-import Update
 import AVFoundation
 import Darwin.Mach
 import SwiftUI
@@ -42,7 +41,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     let menuBarState = MenuBarState()
     let statusItemController = StatusItemController()
     let hotkeyManager = HotkeyManager()
-    let sparkleController = SparkleController()
 
     var isCaptureRunning = false
     var monitoringTask: Task<Void, Never>?
@@ -95,8 +93,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 }
             }
         }
-
-        sparkleController.start(appcastURLString: AppSettings.sparkleAppcastURLString)
 
         if AppSettings.autoStartRecordingOnLaunch {
             startCapturePipeline(userInitiated: false)

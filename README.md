@@ -16,11 +16,11 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 - **Four configurable hotkeys** — Save clip, toggle recording, save last 15s, save last 60s — assign any key combination.
 - **Clip library** — Browse, preview, play, reveal in Finder, or delete saved clips from a built-in library window.
 - **Quality presets** — Performance, Quality, Ultra, and Custom modes that tune resolution, frame rate, and bitrate together.
+- **Live settings** — Capture, encoding, and audio changes apply automatically while recording; no restart required.
 - **Reliable save flow** — Preflight checks prevent saving when not recording or while the buffer is still filling; success feedback only appears after the clip is written.
 - **Clear menu bar status** — Live badge shows recording state, buffered time, and save progress (Saving / Saved / Failed). Menu includes Start/Stop Recording, buffer usage, and save actions that disable until footage is ready.
 - **Audio cue & notifications** — Optional sound and notification when a clip saves successfully; operational notifications for save failures and when recording stops or fails to start (permissions, display disconnect, GPU pressure).
 - **Launch at login & auto-start** — Optionally begin recording automatically on login.
-- **Sparkle auto-updates** — Checks for new versions daily.
 
 ## Requirements
 
@@ -29,9 +29,9 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 
 ## Download
 
-Grab the latest release from the [Releases](https://github.com/alex/ReplayMac/releases) page.
+Grab the latest release from the [Releases](https://github.com/picccassso/ReplayMac/releases) page. Updates are manual — download new releases from GitHub when you want to upgrade.
 
-> **Note:** ReplayMac has not been notarized. On first launch, right-click the app and choose **Open** to bypass Gatekeeper.
+> **Note:** ReplayMac is not notarized. On first launch, right-click the app and choose **Open** to bypass Gatekeeper.
 
 ## Build from source
 
@@ -56,7 +56,5 @@ Saved clips are written to:
 ![Hotkey settings](app_photos/4_hotkey_settings.png)
 ![Advanced settings](app_photos/5_advanced_settings.png)
 ![Clip library](app_photos/6_library.png)
-
-Screenshots may lag behind the latest UI (for example, Advanced settings no longer includes a watermark toggle).
 
 </details>

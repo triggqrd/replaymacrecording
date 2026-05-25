@@ -1,6 +1,8 @@
 # Use of AI
 
-ReplayMac is being built and maintained with the assistance of Kimi K2.6, GPT 5.x, and DeepSeek V4 Flash/Pro. 
+ReplayMac is being built and maintained with the assistance of Kimi K2.6, GPT 5.x, DeepSeek V4 Flash/Pro, and Composer 2.5. 
+
+Currently using Composer 2.5, it's doing really good work :)
 
 AI was used for:
 - Writing and debugging Swift code

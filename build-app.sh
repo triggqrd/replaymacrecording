@@ -54,10 +54,9 @@ swift build -c release --package-path "$ROOT_DIR"
 
 BIN_DIR="$(swift build -c release --show-bin-path --package-path "$ROOT_DIR")"
 BIN_PATH="$BIN_DIR/$BIN_NAME"
-SPARKLE_FRAMEWORK_PATH="$BIN_DIR/Sparkle.framework"
 
 rm -rf "$APP_DIR"
-mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources" "$APP_DIR/Contents/Frameworks"
+mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
 cp "$INFO_PLIST" "$APP_DIR/Contents/Info.plist"
 cp "$BIN_PATH" "$APP_DIR/Contents/MacOS/$BIN_NAME"
@@ -67,20 +66,12 @@ if [ -f "$ICON_PATH" ]; then
   cp "$ICON_PATH" "$APP_DIR/Contents/Resources/ReplayMac.icns"
 fi
 
-if [ -d "$SPARKLE_FRAMEWORK_PATH" ]; then
-  cp -R "$SPARKLE_FRAMEWORK_PATH" "$APP_DIR/Contents/Frameworks/Sparkle.framework"
-fi
-
 # Copy SPM resource bundles into Contents/Resources so they are sealed by codesign
 for bundle in "$BIN_DIR"/*.bundle; do
   if [ -d "$bundle" ]; then
     cp -R "$bundle" "$APP_DIR/Contents/Resources/"
   fi
 done
-
-if ! /usr/bin/otool -l "$APP_DIR/Contents/MacOS/$BIN_NAME" | /usr/bin/grep -q "@executable_path/../Frameworks"; then
-  /usr/bin/install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_DIR/Contents/MacOS/$BIN_NAME"
-fi
 
 codesign --force --deep --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_DIR"
 codesign --verify --deep --strict "$APP_DIR"

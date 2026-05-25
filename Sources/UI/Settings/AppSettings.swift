@@ -119,11 +119,7 @@ public enum AppSettings {
     public static var captureMicrophone: Bool { Defaults[.captureMicrophone] }
     public static var playAudioCueOnSave: Bool { Defaults[.playAudioCueOnSave] }
     public static var showNotificationOnSave: Bool { Defaults[.showNotificationOnSave] }
-    public static var watermarkSavedClips: Bool { Defaults[.watermarkSavedClips] }
     public static var memoryCapMB: Double { Defaults[.memoryCapMB] }
-    public static var sparkleAppcastURLString: String {
-        Defaults[.sparkleAppcastURLString]
-    }
 
     public static var frameRate: Int {
         Defaults[.frameRate]
@@ -235,8 +231,6 @@ public extension Defaults.Keys {
     static let queueDepth = Key<Int>("queueDepth", default: 5)
     static let playAudioCueOnSave = Key<Bool>("playAudioCueOnSave", default: true)
     static let showNotificationOnSave = Key<Bool>("showNotificationOnSave", default: true)
-    static let watermarkSavedClips = Key<Bool>("watermarkSavedClips", default: false)
-    static let sparkleAppcastURLString = Key<String>("sparkleAppcastURLString", default: "")
 
     static let systemAudioVolume = Key<Double>("systemAudioVolume", default: 1.0)
     static let microphoneVolume = Key<Double>("microphoneVolume", default: 1.0)

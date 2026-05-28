@@ -48,6 +48,7 @@ public struct SettingsView: View {
     @State var captureProfiles: [CaptureProfile] = []
     @State var selectedProfileID: UUID?
     @State var newProfileName = ""
+    @State var selectedProfileNameDraft = ""
     @State var profileErrorMessage: String?
     @State var launchAtLoginError: String?
     @State var displayLoadError: String?

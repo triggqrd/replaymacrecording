@@ -69,6 +69,16 @@ extension SettingsView {
 
             if let selectedProfile {
                 Section {
+                    HStack(spacing: 8) {
+                        TextField("Profile name", text: $selectedProfileNameDraft)
+                        Button {
+                            renameSelectedProfile()
+                        } label: {
+                            Label("Rename", systemImage: "pencil")
+                        }
+                        .disabled(!canRenameSelectedProfile)
+                    }
+
                     ProfileDetailRow(label: "Video", value: selectedProfile.videoDetail)
                     ProfileDetailRow(label: "Capture", value: selectedProfile.captureDetail)
                     ProfileDetailRow(label: "Audio", value: selectedProfile.audioDetail)
@@ -86,11 +96,23 @@ extension SettingsView {
             }
         }
         .formStyle(.grouped)
+        .onChange(of: selectedProfileID) { _, _ in
+            syncSelectedProfileNameDraft()
+        }
+        .onAppear {
+            syncSelectedProfileNameDraft()
+        }
     }
 
     var selectedProfile: CaptureProfile? {
         guard let selectedProfileID else { return nil }
         return captureProfiles.first { $0.id == selectedProfileID }
+    }
+
+    var canRenameSelectedProfile: Bool {
+        guard let selectedProfile else { return false }
+        let trimmed = selectedProfileNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && trimmed != selectedProfile.name
     }
 
     func loadCaptureProfiles() {
@@ -101,6 +123,7 @@ extension SettingsView {
         }
         captureProfiles = profiles.sorted { $0.updatedAt > $1.updatedAt }
         selectedProfileID = selectedProfileID ?? captureProfiles.first?.id
+        syncSelectedProfileNameDraft()
     }
 
     func persistCaptureProfiles() {
@@ -122,6 +145,7 @@ extension SettingsView {
         let profile = makeProfile(named: name, id: UUID(), createdAt: Date())
         captureProfiles.insert(profile, at: 0)
         selectedProfileID = profile.id
+        selectedProfileNameDraft = profile.name
         newProfileName = ""
         persistCaptureProfiles()
     }
@@ -138,6 +162,22 @@ extension SettingsView {
             captureProfiles[index] = replacement
             captureProfiles.sort { $0.updatedAt > $1.updatedAt }
             selectedProfileID = replacement.id
+            selectedProfileNameDraft = replacement.name
+            persistCaptureProfiles()
+        }
+    }
+
+    func renameSelectedProfile() {
+        guard let selectedProfile else { return }
+        let name = selectedProfileNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+
+        if let index = captureProfiles.firstIndex(where: { $0.id == selectedProfile.id }) {
+            captureProfiles[index].name = name
+            captureProfiles[index].updatedAt = Date()
+            captureProfiles.sort { $0.updatedAt > $1.updatedAt }
+            selectedProfileID = selectedProfile.id
+            selectedProfileNameDraft = name
             persistCaptureProfiles()
         }
     }
@@ -146,6 +186,7 @@ extension SettingsView {
         guard let selectedProfileID else { return }
         captureProfiles.removeAll { $0.id == selectedProfileID }
         self.selectedProfileID = captureProfiles.first?.id
+        syncSelectedProfileNameDraft()
         persistCaptureProfiles()
     }
 
@@ -214,6 +255,10 @@ extension SettingsView {
             longBufferEnabled: longBufferEnabled,
             longBufferDurationMinutes: longBufferDurationMinutes
         )
+    }
+
+    func syncSelectedProfileNameDraft() {
+        selectedProfileNameDraft = selectedProfile?.name ?? ""
     }
 }
 

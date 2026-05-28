@@ -15,7 +15,10 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 - **Ring buffer memory management** — Configurable total memory cap (256 MB–4 GB) shared across all replay buffers, evicting oldest footage as needed and trimming under system memory pressure.
 - **Opt-in extended replay buffer** — Save longer 5, 10, or 30 minute replay windows by rolling temporary segments to disk, with clear SSD write and disk usage warnings before enabling.
 - **Four configurable hotkeys** — Save clip, toggle recording, save last 15s, save last 60s — assign any key combination.
-- **Clip library + quick trim** — Browse, preview, trim/export, play, reveal in Finder, or delete saved clips from a built-in library window.
+- **Clip library + quick trim** — Browse, preview, trim/export, play, reveal in Finder, rename, or delete saved clips from a built-in library window.
+- **Clip organization** — Search clips, mark favorites, add display names, tags, and notes, and filter the library down to favorites.
+- **Storage cleanup** — See total library size and move non-favorite clips to Trash by age or in bulk.
+- **Capture profiles** — Save named video/audio/buffer configurations and apply them later when switching games, displays, or workflows.
 - **Quality presets** — Performance, Quality, Ultra, and Custom modes that tune resolution, frame rate, and bitrate together.
 - **Live settings** — Capture, encoding, and audio changes apply automatically while recording; no restart required.
 - **Reliable save flow** — Preflight checks prevent saving when not recording or while the buffer is still filling; success feedback only appears after the clip is written.
@@ -49,6 +52,8 @@ Saved clips are written to:
 `~/Movies/ReplayMac/`
 
 When the extended replay buffer is enabled, ReplayMac also writes temporary rolling segments to a hidden `.ReplayMacLongBuffer` folder inside the output directory. Those segments are rotated automatically and removed when extended replay is disabled or recording stops.
+
+Clip library notes, tags, display names, and favorite state are stored in a hidden `.ReplayMacClipLibrary.json` file inside the output directory.
 
 <details>
 <summary>Screenshots</summary>

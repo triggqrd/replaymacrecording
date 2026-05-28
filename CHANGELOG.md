@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3
+
+- Fix separate dual-display save preflight so saves succeed when both display ring buffers are ready but the primary buffer is empty in separate-file mode
+- Add clip organization: favorites, display names, tags, notes, search, and safe file renaming in the clip library
+- Add storage visibility and cleanup tools to show total library usage and move non-favorite clips to Trash by age or in bulk
+- Add capture profiles in Settings to save, apply, update, and delete named video/audio/buffer configurations
+- Add renaming for capture profiles
+- Fix a capture-handler MainActor crash during pipeline updates
+- Improve capture pipeline backpressure and dual-display concurrency: dedicated secondary-display queue, compositing outside the compositor lock, microphone conversion off the realtime tap path, and a bounded long-buffer append pump with drop tracking in monitoring output
+- Update README feature notes and refresh app screenshots
+
 ## 1.2
 
 - Add selected-app system audio capture with a clearer System audio mode picker: Off, All apps, or Selected app only

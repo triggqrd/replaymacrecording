@@ -1,9 +1,22 @@
 # Changelog
 
-## Unreleased
+## 1.4
 
-- Add macOS share sheet and copy-file actions to the clip library
-- Check GitHub Releases on launch and show an update link in the menu when a newer version is available
+- Add native macOS share sheet actions to the clip library
+- Add copy-file actions to the clip library with short visual confirmation
+- Check GitHub Releases for newer versions on app launch
+- Show an update link in the menu bar menu when a newer version is available
+- Add release tag comparison tests
+- Add GitHub Actions CI for Swift builds and tests
+- Fix ScreenCaptureKit concurrency import and build on CI
+- Roll back partially started dual-display streams when either stream fails to start
+- Apply the same dual-display rollback during GPU-pressure stream recreation
+- Notify the user and restart capture when live settings reconfiguration fails
+- Add a configurable hotkey for saving the extended replay buffer
+- Include the extended replay shortcut in configured save hotkey detection
+- Add live system audio and microphone level meters to audio settings
+- Measure post-volume PCM levels with lightweight RMS sampling and decay
+- Reset displayed audio levels when capture or microphone recording stops
 
 ## 1.3
 

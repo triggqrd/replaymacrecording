@@ -12,9 +12,10 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 - **Dual display support** — Capture one or two monitors, saved as a side-by-side composite or as separate files.
 - **Hardware-accelerated encoding** — HEVC or H.264 via VideoToolbox, with configurable resolution, frame rate (30/60/120 fps), and bitrate (10–50 Mbps).
 - **System audio modes + microphone** — Record all system audio, no system audio, or only one selected app; microphone is saved as a separate AAC track with its own device and volume controls.
+- **Live audio level meters** — Real-time system audio and microphone level meters in audio settings, with RMS-based measurement and auto-reset when capture stops.
 - **Ring buffer memory management** — Configurable total memory cap (256 MB–4 GB) shared across all replay buffers, evicting oldest footage as needed and trimming under system memory pressure.
 - **Opt-in extended replay buffer** — Save longer 5, 10, or 30 minute replay windows by rolling temporary segments to disk, with clear SSD write and disk usage warnings before enabling.
-- **Four configurable hotkeys** — Save clip, toggle recording, save last 15s, save last 60s — assign any key combination.
+- **Five configurable hotkeys** — Save clip, toggle recording, save last 15s, save last 60s, save extended replay — assign any key combination.
 - **Clip library + quick trim** — Browse, preview, trim/export, play, reveal in Finder, rename, or delete saved clips from a built-in library window.
 - **Clip sharing** — Open the macOS share sheet or copy a saved clip file for pasting into another app.
 - **Clip organization** — Search clips, mark favorites, add display names, tags, and notes, and filter the library down to favorites.
@@ -62,22 +63,22 @@ Clip library notes, tags, display names, and favorite state are stored in a hidd
 
 | General | Audio |
 | --- | --- |
-| ![General settings](app_photos/1_general_settings.png?v=1.3) | ![Audio settings](app_photos/3_audio_settings.png?v=1.3) |
+| ![General settings](app_photos/1_general_settings.png?v=1.4) | ![Audio settings](app_photos/3_audio_settings.png?v=1.4) |
 
 | Video | Video extended replay |
 | --- | --- |
-| ![Video settings](app_photos/2_video_settings_1.png?v=1.3) | ![Video settings extended replay](app_photos/2_video_settings_2.png?v=1.3) |
+| ![Video settings](app_photos/2_video_settings_1.png?v=1.4) | ![Video settings extended replay](app_photos/2_video_settings_2.png?v=1.4) |
 
 | Profiles | Profile details |
 | --- | --- |
-| ![Profile settings](app_photos/4_profile_settings_1.png?v=1.3) | ![Profile settings details](app_photos/4_profile_settings_2.png?v=1.3) |
+| ![Profile settings](app_photos/4_profile_settings_1.png?v=1.4) | ![Profile settings details](app_photos/4_profile_settings_2.png?v=1.4) |
 
 | Advanced | Hotkeys |
 | --- | --- |
-| ![Advanced settings](app_photos/6_advanced_settings.png?v=1.3) | ![Hotkey settings](app_photos/5_hotkey_settings.png?v=1.3) |
+| ![Advanced settings](app_photos/6_advanced_settings.png?v=1.4) | ![Hotkey settings](app_photos/5_hotkey_settings.png?v=1.4) |
 
 | Clip library | Clip details | Storage cleanup |
 | --- | --- | --- |
-| ![Clip library](app_photos/7_library_view_1.png?v=1.3) | ![Clip library details](app_photos/7_library_view_2.png?v=1.3) | ![Clip library cleanup](app_photos/7_library_view_3.png?v=1.3) |
+| ![Clip library](app_photos/7_library_view_1.png?v=1.4) | ![Clip library details](app_photos/7_library_view_2.png?v=1.4) | ![Clip library cleanup](app_photos/7_library_view_3.png?v=1.4) |
 
 </details>

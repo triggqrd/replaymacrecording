@@ -346,8 +346,7 @@ public actor CaptureManager {
         let newStream2 = SCStream(filter: filter2, configuration: config2, delegate: delegate2)
         try newStream2.addStreamOutput(delegate2, type: .screen, sampleHandlerQueue: secondaryVideoQueue)
 
-        try await newStream1.startCapture()
-        try await newStream2.startCapture()
+        try await startDualStreams(newStream1, newStream2)
 
         userInitiatedStop = false
         isDualMode = true
@@ -483,8 +482,7 @@ public actor CaptureManager {
             let replacement2 = SCStream(filter: filter2, configuration: config2, delegate: delegate2)
             try replacement2.addStreamOutput(delegate2, type: .screen, sampleHandlerQueue: secondaryVideoQueue)
 
-            try await replacement1.startCapture()
-            try await replacement2.startCapture()
+            try await startDualStreams(replacement1, replacement2)
             stream1 = replacement1
             stream2 = replacement2
         } else {
@@ -500,6 +498,17 @@ public actor CaptureManager {
             try replacement.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: audioQueue)
             try await replacement.startCapture()
             stream = replacement
+        }
+    }
+
+    private func startDualStreams(_ firstStream: SCStream, _ secondStream: SCStream) async throws {
+        do {
+            try await firstStream.startCapture()
+            try await secondStream.startCapture()
+        } catch {
+            try? await secondStream.stopCapture()
+            try? await firstStream.stopCapture()
+            throw error
         }
     }
 

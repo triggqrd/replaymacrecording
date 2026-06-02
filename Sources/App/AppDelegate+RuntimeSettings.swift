@@ -145,6 +145,11 @@ extension AppDelegate {
             }
         } catch {
             print("Failed to apply runtime settings: \(error)")
+            NotificationManager.shared.showOperationalNotification(
+                title: "Capture Settings Failed",
+                body: "ReplayMac could not apply the new capture settings cleanly. Recording is restarting."
+            )
+            await restartFullPipeline()
         }
     }
 

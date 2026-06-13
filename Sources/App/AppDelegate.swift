@@ -43,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     let hotkeyManager = HotkeyManager()
 
     var isCaptureRunning = false
+    var wasRecordingBeforeSleep = false
     var monitoringTask: Task<Void, Never>?
     var clipLibraryWindowController: NSWindowController?
     var bufferDurationObservation: Defaults.Observation?
@@ -103,6 +104,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         }
 
         setupWindowObservers()
+        setupPowerObservers()
 
         bufferDurationObservation = Defaults.observe(.bufferDurationSeconds) { [weak self] _ in
             self?.syncBufferDurationToSettings()

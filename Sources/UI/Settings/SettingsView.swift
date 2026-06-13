@@ -11,6 +11,7 @@ public struct SettingsView: View {
     @Default(.outputDirectoryPath) var outputDirectoryPath
     @Default(.launchAtLogin) var launchAtLogin
     @Default(.autoStartRecordingOnLaunch) var autoStartRecordingOnLaunch
+    @Default(.resumeRecordingAfterWake) var resumeRecordingAfterWake
 
     @Default(.videoCodec) var videoCodecRawValue
     @Default(.captureMode) var captureModeRawValue

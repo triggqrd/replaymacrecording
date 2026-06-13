@@ -39,6 +39,7 @@ extension SettingsView {
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                 Toggle("Auto-start recording on launch", isOn: $autoStartRecordingOnLaunch)
+                Toggle("Resume recording after wake", isOn: $resumeRecordingAfterWake)
             } header: {
                 sectionHeader(icon: "power", title: "Startup")
             }

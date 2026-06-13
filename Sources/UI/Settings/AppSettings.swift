@@ -138,6 +138,7 @@ public enum AppSettings {
     }
 
     public static var autoStartRecordingOnLaunch: Bool { Defaults[.autoStartRecordingOnLaunch] }
+    public static var resumeRecordingAfterWake: Bool { Defaults[.resumeRecordingAfterWake] }
     public static var captureSystemAudio: Bool { Defaults[.captureSystemAudio] }
     public static var captureMicrophone: Bool { Defaults[.captureMicrophone] }
     public static var mergeAudioTracks: Bool { Defaults[.mergeAudioTracks] }
@@ -240,6 +241,7 @@ public extension Defaults.Keys {
     static let outputDirectoryPath = Key<String>("outputDirectoryPath", default: AppDefaultValues.outputDirectoryPath)
     static let launchAtLogin = Key<Bool>("launchAtLogin", default: false)
     static let autoStartRecordingOnLaunch = Key<Bool>("autoStartRecordingOnLaunch", default: true)
+    static let resumeRecordingAfterWake = Key<Bool>("resumeRecordingAfterWake", default: true)
 
     static let videoCodec = Key<String>("videoCodec", default: VideoCodec.hevc.rawValue)
     static let captureMode = Key<String>("captureMode", default: "single")

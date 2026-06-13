@@ -19,6 +19,47 @@ extension AppDelegate {
         )
     }
 
+    func setupPowerObservers() {
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        workspaceCenter.addObserver(
+            self,
+            selector: #selector(systemWillSleep(_:)),
+            name: NSWorkspace.willSleepNotification,
+            object: nil
+        )
+        workspaceCenter.addObserver(
+            self,
+            selector: #selector(systemDidWake(_:)),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
+    }
+
+    @objc private func systemWillSleep(_ notification: Notification) {
+        // Remember whether we were actively recording so we only resume what
+        // the user actually had running. Captured before the OS tears the
+        // capture stream down as the displays sleep.
+        wasRecordingBeforeSleep = isCaptureRunning
+    }
+
+    @objc private func systemDidWake(_ notification: Notification) {
+        guard AppSettings.resumeRecordingAfterWake,
+              wasRecordingBeforeSleep,
+              !isCaptureRunning else {
+            wasRecordingBeforeSleep = false
+            return
+        }
+        wasRecordingBeforeSleep = false
+
+        // Give the displays a moment to come back before recreating the
+        // capture stream, otherwise ScreenCaptureKit may fail to start.
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            guard !self.isCaptureRunning else { return }
+            self.startCapturePipeline(userInitiated: false)
+        }
+    }
+
     @objc private func windowVisibilityChanged(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
             self?.updateActivationPolicy(bringVisibleWindowToFront: true)

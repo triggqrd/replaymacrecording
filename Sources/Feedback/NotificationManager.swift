@@ -7,6 +7,15 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
 
     private var center: UNUserNotificationCenter?
 
+    private enum Category {
+        static let clipSaved = "CLIP_SAVED"
+    }
+
+    private enum Action {
+        static let open = "OPEN_CLIP"
+        static let revealInFinder = "REVEAL_IN_FINDER"
+    }
+
     private override init() {
         super.init()
         // UNUserNotificationCenter crashes if called outside a proper .app bundle.
@@ -14,7 +23,30 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         if Bundle.main.bundlePath.hasSuffix(".app") {
             self.center = UNUserNotificationCenter.current()
             self.center?.delegate = self
+            registerCategories()
         }
+    }
+
+    private func registerCategories() {
+        guard let center else { return }
+
+        let openAction = UNNotificationAction(
+            identifier: Action.open,
+            title: "Open",
+            options: [.foreground]
+        )
+        let revealAction = UNNotificationAction(
+            identifier: Action.revealInFinder,
+            title: "Reveal in Finder",
+            options: [.foreground]
+        )
+        let clipSaved = UNNotificationCategory(
+            identifier: Category.clipSaved,
+            actions: [openAction, revealAction],
+            intentIdentifiers: [],
+            options: []
+        )
+        center.setNotificationCategories([clipSaved])
     }
 
     public func requestAuthorization() {
@@ -75,6 +107,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         content.title = "Clip Saved"
         content.body = "\(Int(clipDuration.rounded()))s clip saved as \(fileURL.lastPathComponent)"
         content.sound = .default
+        content.categoryIdentifier = Category.clipSaved
         content.userInfo = ["clipPath": fileURL.path(percentEncoded: false)]
 
         let request = UNNotificationRequest(
@@ -164,6 +197,19 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
         }
 
         let clipURL = URL(fileURLWithPath: clipPath)
-        NSWorkspace.shared.activateFileViewerSelecting([clipURL])
+        guard FileManager.default.fileExists(atPath: clipURL.path) else {
+            // Clip was moved, renamed, or deleted since the notification posted.
+            return
+        }
+
+        switch response.actionIdentifier {
+        case Action.open:
+            NSWorkspace.shared.open(clipURL)
+        case Action.revealInFinder, UNNotificationDefaultActionIdentifier:
+            // Tapping the notification body keeps the original reveal behavior.
+            NSWorkspace.shared.activateFileViewerSelecting([clipURL])
+        default:
+            break
+        }
     }
 }

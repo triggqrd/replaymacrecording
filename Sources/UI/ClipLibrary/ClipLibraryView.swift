@@ -19,6 +19,7 @@ public struct ClipLibraryView: View {
     @State private var metadataDraft = ClipUserMetadata.empty
     @State private var renameDraft = ""
     @State private var copiedFilePath: String?
+    @State private var gifExportingPath: String?
 
     public init() {}
 
@@ -357,6 +358,24 @@ public struct ClipLibraryView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
+                Button {
+                    Task { await exportWholeClipGIF(for: row) }
+                } label: {
+                    HStack(spacing: 6) {
+                        if gifExportingPath == row.info.fileURL.path {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "photo.stack")
+                        }
+                        Text("Export GIF")
+                    }
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(gifExportingPath != nil)
+                .help("Export the whole clip as a looping GIF (no audio). Use Trim to choose a range or size.")
+
                 Text(row.info.fileURL.lastPathComponent)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(AppTheme.textSecondary)
@@ -518,6 +537,29 @@ public struct ClipLibraryView: View {
             selection = [oldID]
         }
         syncDraftFromSelection()
+    }
+
+    private func exportWholeClipGIF(for row: ClipRow) async {
+        let sourceURL = row.info.fileURL
+        gifExportingPath = sourceURL.path
+        defer { gifExportingPath = nil }
+
+        let end = row.info.duration.isFinite && row.info.duration > 0 ? row.info.duration : 0
+        guard end > 0 else { return }
+
+        do {
+            let outputURL = GIFExporter.uniqueOutputURL(basedOn: sourceURL)
+            try await GIFExporter.export(
+                sourceURL: sourceURL,
+                startSeconds: 0,
+                endSeconds: end,
+                to: outputURL
+            )
+            // GIFs aren't listed in the library (MP4s only), so reveal in Finder.
+            NSWorkspace.shared.activateFileViewerSelecting([outputURL])
+        } catch {
+            print("Failed to export GIF: \(error)")
+        }
     }
 
     private func copyFile(_ url: URL) {
@@ -1107,7 +1149,11 @@ private struct ClipTrimView: View {
     @State private var trimStart: Double = 0
     @State private var trimEnd: Double = 0
     @State private var isExporting = false
+    @State private var isExportingGIF = false
+    @State private var gifWidth: GIFWidth = .medium
     @State private var errorMessage: String?
+
+    private var isBusy: Bool { isExporting || isExportingGIF }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -1160,6 +1206,22 @@ private struct ClipTrimView: View {
                     .font(.system(size: 12, design: .rounded))
             }
 
+            HStack(spacing: 8) {
+                Text("GIF size")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(AppTheme.textSecondary)
+                Picker("GIF size", selection: $gifWidth) {
+                    ForEach(GIFWidth.allCases) { width in
+                        Text(width.title).tag(width)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(maxWidth: 260)
+                .disabled(isBusy)
+                Spacer()
+            }
+
             HStack {
                 Text(url.lastPathComponent)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -1171,7 +1233,22 @@ private struct ClipTrimView: View {
                 Button("Cancel") {
                     dismiss()
                 }
-                .disabled(isExporting)
+                .disabled(isBusy)
+
+                Button {
+                    Task { await exportGIF() }
+                } label: {
+                    if isExportingGIF {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("Export GIF", systemImage: "photo.stack")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .disabled(isBusy || trimEnd <= trimStart)
+                .help("Export the selected range as a looping GIF (no audio)")
 
                 Button {
                     Task { await exportTrimmedClip() }
@@ -1185,7 +1262,7 @@ private struct ClipTrimView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.accent)
-                .disabled(isExporting || trimEnd <= trimStart)
+                .disabled(isBusy || trimEnd <= trimStart)
             }
         }
         .padding(16)
@@ -1253,6 +1330,31 @@ private struct ClipTrimView: View {
         }
 
         isExporting = false
+    }
+
+    private func exportGIF() async {
+        isExportingGIF = true
+        errorMessage = nil
+
+        do {
+            let outputURL = GIFExporter.uniqueOutputURL(basedOn: url)
+            try await GIFExporter.export(
+                sourceURL: url,
+                startSeconds: trimStart,
+                endSeconds: trimEnd,
+                maxWidth: gifWidth.points,
+                to: outputURL
+            )
+
+            // GIFs aren't shown in the library (it lists MP4s only), so reveal
+            // the exported file in Finder instead of reloading the list.
+            NSWorkspace.shared.activateFileViewerSelecting([outputURL])
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isExportingGIF = false
     }
 
     private func seek(to seconds: Double) {

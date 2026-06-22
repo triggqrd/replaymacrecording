@@ -18,6 +18,9 @@ extension AppDelegate {
         hotkeyManager.onSaveLongBuffer = { [weak self] in
             self?.saveLongBufferFromUI()
         }
+        hotkeyManager.onOpenClipLibrary = { [weak self] in
+            self?.openClipLibraryWindow()
+        }
         hotkeyManager.start()
     }
 

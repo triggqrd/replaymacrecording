@@ -19,6 +19,12 @@ extension SettingsView {
             } header: {
                 sectionHeader(icon: "stopwatch", title: "Quick Presets")
             }
+
+            Section {
+                KeyboardShortcuts.Recorder("Open clip library", name: .openClipLibrary)
+            } header: {
+                sectionHeader(icon: "film.stack", title: "Library")
+            }
         }
         .formStyle(.grouped)
     }

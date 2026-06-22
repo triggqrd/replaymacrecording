@@ -6,11 +6,13 @@ import Save
 
 public struct ClipLibraryView: View {
     @StateObject private var model = ClipLibraryViewModel()
-    @State private var selection: String?
+    @State private var selection = Set<String>()
     @State private var sortMode: ClipSortMode = .date
     @State private var searchText = ""
     @State private var favoritesOnly = false
     @State private var deleteCandidate: ClipRow?
+    @State private var bulkDeletePresented = false
+    @State private var bulkTagDraft = ""
     @State private var cleanupSheetPresented = false
     @State private var previewURL: URL?
     @State private var trimURL: URL?
@@ -42,8 +44,13 @@ public struct ClipLibraryView: View {
                     .padding(.vertical, 12)
             }
 
-            if let selectedRow {
-                bottomBarView(for: selectedRow)
+            if selection.count > 1 {
+                batchBarView(for: selectedRows)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(AppTheme.backgroundSecondary.opacity(0.5))
+            } else if let row = singleSelectedRow {
+                bottomBarView(for: row)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                     .background(AppTheme.backgroundSecondary.opacity(0.5))
@@ -63,9 +70,7 @@ public struct ClipLibraryView: View {
             Button("Delete", role: .destructive) {
                 Task {
                     await model.delete(row)
-                    if selection == row.id {
-                        selection = nil
-                    }
+                    selection.remove(row.id)
                     deleteCandidate = nil
                 }
             }
@@ -74,6 +79,18 @@ public struct ClipLibraryView: View {
             }
         } message: { row in
             Text("Move \(row.fileName) to Trash?")
+        }
+        .alert("Delete \(selectedRows.count) Clips?", isPresented: $bulkDeletePresented) {
+            Button("Delete", role: .destructive) {
+                let targets = selectedRows
+                Task {
+                    await model.delete(targets)
+                    pruneSelectionToExistingRows()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Move \(selectedRows.count) clips to Trash? Favorites are included.")
         }
         .sheet(isPresented: previewSheetBinding) {
             if let previewURL {
@@ -91,9 +108,7 @@ public struct ClipLibraryView: View {
             ClipCleanupView(summary: model.storageSummary) { action in
                 Task {
                     await model.cleanup(action)
-                    if let selection, !model.rows.contains(where: { $0.id == selection }) {
-                        self.selection = nil
-                    }
+                    pruneSelectionToExistingRows()
                     cleanupSheetPresented = false
                 }
             }
@@ -205,7 +220,7 @@ public struct ClipLibraryView: View {
             TableColumn("") { row in
                 Button {
                     model.toggleFavorite(row)
-                    if selection == row.id {
+                    if selection.contains(row.id) {
                         syncDraftFromSelection()
                     }
                 } label: {
@@ -391,9 +406,83 @@ public struct ClipLibraryView: View {
         }
     }
 
-    private var selectedRow: ClipRow? {
-        guard let selection else { return nil }
-        return model.rows.first(where: { $0.id == selection })
+    private func batchBarView(for rows: [ClipRow]) -> some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                Text("\(rows.count) clips selected")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AppTheme.textPrimary)
+
+                Button {
+                    model.setFavorite(rows, to: true)
+                } label: {
+                    Label("Favorite", systemImage: "star.fill")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button {
+                    model.setFavorite(rows, to: false)
+                } label: {
+                    Label("Unfavorite", systemImage: "star.slash")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                ShareLink(items: rows.map(\.info.fileURL)) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Spacer()
+
+                Button(role: .destructive) {
+                    bulkDeletePresented = true
+                } label: {
+                    Label("Delete \(rows.count)", systemImage: "trash")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(AppTheme.danger)
+            }
+
+            HStack(spacing: 12) {
+                TextField("Add tag to all selected", text: $bulkTagDraft)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { applyBulkTag(to: rows) }
+
+                Button("Add Tag") {
+                    applyBulkTag(to: rows)
+                }
+                .disabled(bulkTagDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .font(.system(size: 12, weight: .regular, design: .rounded))
+        }
+    }
+
+    private func applyBulkTag(to rows: [ClipRow]) {
+        let tag = bulkTagDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !tag.isEmpty else { return }
+        model.addTag(tag, to: rows)
+        bulkTagDraft = ""
+    }
+
+    private var selectedRows: [ClipRow] {
+        model.rows.filter { selection.contains($0.id) }
+    }
+
+    private var singleSelectedRow: ClipRow? {
+        guard selection.count == 1 else { return nil }
+        return model.rows.first(where: { selection.contains($0.id) })
+    }
+
+    private func pruneSelectionToExistingRows() {
+        selection = selection.filter { id in model.rows.contains(where: { $0.id == id }) }
     }
 
     private var visibleRows: [ClipRow] {
@@ -408,13 +497,13 @@ public struct ClipLibraryView: View {
     }
 
     private func syncDraftFromSelection() {
-        guard let selectedRow else {
+        guard let row = singleSelectedRow else {
             metadataDraft = .empty
             renameDraft = ""
             return
         }
-        metadataDraft = selectedRow.userMetadata
-        renameDraft = selectedRow.fileNameWithoutExtension
+        metadataDraft = row.userMetadata
+        renameDraft = row.fileNameWithoutExtension
     }
 
     private func saveDraft(for row: ClipRow) {
@@ -424,9 +513,9 @@ public struct ClipLibraryView: View {
     private func applyRename(for row: ClipRow) {
         let oldID = row.id
         if let newID = model.rename(row, to: renameDraft, metadata: metadataDraft) {
-            selection = newID
+            selection = [newID]
         } else {
-            selection = oldID
+            selection = [oldID]
         }
         syncDraftFromSelection()
     }
@@ -628,6 +717,52 @@ private final class ClipLibraryViewModel: ObservableObject {
             updateStorageSummary()
         } catch {
             print("Failed to delete clip: \(error)")
+        }
+    }
+
+    func delete(_ rowsToDelete: [ClipRow]) async {
+        let ids = Set(rowsToDelete.map(\.id))
+        for row in rowsToDelete {
+            do {
+                try FileManager.default.trashItem(at: row.info.fileURL, resultingItemURL: nil)
+                metadataByPath.removeValue(forKey: ClipLibraryMetadataStore.key(for: row.info.fileURL))
+            } catch {
+                print("Failed to delete clip: \(error)")
+            }
+        }
+        rows.removeAll { ids.contains($0.id) }
+        persistMetadata()
+        updateStorageSummary()
+    }
+
+    func setFavorite(_ targetRows: [ClipRow], to isFavorite: Bool) {
+        for row in targetRows {
+            var metadata = row.userMetadata
+            metadata.isFavorite = isFavorite
+            applyMetadataInPlace(metadata, for: row)
+        }
+        persistMetadata()
+    }
+
+    func addTag(_ tag: String, to targetRows: [ClipRow]) {
+        let clean = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        for row in targetRows {
+            var metadata = row.userMetadata
+            if !metadata.tags.contains(where: { $0.caseInsensitiveCompare(clean) == .orderedSame }) {
+                metadata.tags.append(clean)
+            }
+            applyMetadataInPlace(metadata, for: row)
+        }
+        persistMetadata()
+    }
+
+    /// Updates a clip's metadata in the cache and live rows without writing to
+    /// disk, so batch operations can persist once at the end.
+    private func applyMetadataInPlace(_ metadata: ClipUserMetadata, for row: ClipRow) {
+        metadataByPath[ClipLibraryMetadataStore.key(for: row.info.fileURL)] = metadata
+        if let index = rows.firstIndex(where: { $0.id == row.id }) {
+            rows[index].userMetadata = metadata
         }
     }
 

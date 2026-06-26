@@ -11,6 +11,7 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 - **Instant replay** — Continuously buffers the last N seconds (15–300) of screen and audio; save retroactively with a click or hotkey.
 - **Dual display support** — Capture one or two monitors, saved as a side-by-side composite or as separate files.
 - **Hardware-accelerated encoding** — HEVC or H.264 via VideoToolbox, with configurable resolution, frame rate, and bitrate.
+- **Retina-aware recording** — Record HiDPI displays at their backing pixel resolution while keeping the macOS UI at its comfortable scaled size.
 - **System audio + microphone** — Capture all apps, no audio, or one selected app. Mic and system audio merge into a single track by default; optionally keep as separate tracks inside the MP4.
 - **Live audio level meters** — Real-time RMS-based level meters for system audio and microphone in audio settings.
 - **Ring buffer memory management** — Configurable memory cap (256 MB–4 GB) shared across all replay buffers, with automatic eviction under memory pressure.
@@ -61,6 +62,17 @@ When the extended replay buffer is enabled, ReplayMac also writes temporary roll
 
 Clip library notes, tags, display names, and favorite state are stored in a hidden `.ReplayMacClipLibrary.json` file inside the output directory.
 
+## Capture resolution
+
+ReplayMac shows display sizes as macOS logical resolutions, which can be lower than the physical pixel resolution on Retina and other HiDPI displays. In Settings > Video:
+
+- **Current** records at the logical resolution macOS reports.
+- **Retina** records HiDPI displays at their backing pixel resolution when available, without changing the macOS UI scale.
+- **Half** records at half of the current logical display size.
+- **Custom** forces the saved video to the exact width and height you choose, rescaling the capture if needed.
+
+For dual-display recording, Retina is applied per display. HiDPI displays use their backing pixel size, while non-Retina displays stay at their current size before ReplayMac saves either a side-by-side composite or separate files.
+
 <details>
 <summary>Screenshots</summary>
 
@@ -70,26 +82,26 @@ Clip library notes, tags, display names, and favorite state are stored in a hidd
     <th width="50%">Audio</th>
   </tr>
   <tr>
-    <td width="50%"><img src="app_photos/1_general_settings.png?v=1.6" alt="General settings" width="100%"></td>
-    <td width="50%"><img src="app_photos/3_audio_settings.png?v=1.6" alt="Audio settings" width="100%"></td>
+    <td width="50%"><img src="app_photos/1_general_settings.png?v=1.6.5" alt="General settings" width="100%"></td>
+    <td width="50%"><img src="app_photos/3_audio_settings.png?v=1.6.5" alt="Audio settings" width="100%"></td>
   </tr>
 </table>
 
 | Video | Video extended replay |
 | --- | --- |
-| ![Video settings](app_photos/2_video_settings_1.png?v=1.6) | ![Video settings extended replay](app_photos/2_video_settings_2.png?v=1.6) |
+| ![Video settings](app_photos/2_video_settings_1.png?v=1.6.5) | ![Video settings extended replay](app_photos/2_video_settings_2.png?v=1.6.5) |
 
 | Profiles | Profile details |
 | --- | --- |
-| ![Profile settings](app_photos/4_profile_settings_1.png?v=1.6) | ![Profile settings details](app_photos/4_profile_settings_2.png?v=1.6) |
+| ![Profile settings](app_photos/4_profile_settings_1.png?v=1.6.5) | ![Profile settings details](app_photos/4_profile_settings_2.png?v=1.6.5) |
 
 | Advanced | Hotkeys |
 | --- | --- |
-| ![Advanced settings](app_photos/6_advanced_settings.png?v=1.6) | ![Hotkey settings](app_photos/5_hotkey_settings.png?v=1.6) |
+| ![Advanced settings](app_photos/6_advanced_settings.png?v=1.6.5) | ![Hotkey settings](app_photos/5_hotkey_settings.png?v=1.6.5) |
 
 | Clip library | Clip details | Storage cleanup | Batch actions |
 | --- | --- | --- | --- |
-| ![Clip library](app_photos/7_library_view_1.png?v=1.6) | ![Clip library details](app_photos/7_library_view_2.png?v=1.6) | ![Clip library cleanup](app_photos/7_library_view_3.png?v=1.6) | ![Clip library batch actions](app_photos/7_library_view_4.png?v=1.6) |
+| ![Clip library](app_photos/7_library_view_1.png?v=1.6.5) | ![Clip library details](app_photos/7_library_view_2.png?v=1.6.5) | ![Clip library cleanup](app_photos/7_library_view_3.png?v=1.6.5) | ![Clip library batch actions](app_photos/7_library_view_4.png?v=1.6.5) |
 
 </details>
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.5
+
+- Add Retina capture resolution for HiDPI displays while keeping the macOS UI at its current scaled size
+- Clarify logical, Retina, and custom output sizes in video settings, including dual-display output details
+- Fix Swift concurrency warnings in GIF export
+
 ## 1.6
 
 - Add "Open Last Clip" and "Reveal Last Clip in Finder" menu bar items, shown after the first successful save of the session and hidden if the clip is later moved or deleted

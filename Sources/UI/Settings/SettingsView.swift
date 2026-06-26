@@ -131,13 +131,16 @@ public struct SettingsView: View {
         }
         .onChange(of: captureModeRawValue) { _, _ in
             validateDisplay2Selection()
+            validateCaptureResolutionSelection()
             updateBitrateForCurrentPresetIfNeeded()
         }
         .onChange(of: captureDisplayID) { _, _ in
             validateDisplay2Selection()
+            validateCaptureResolutionSelection()
             updateBitrateForCurrentPresetIfNeeded()
         }
         .onChange(of: captureDisplayID2) { _, _ in
+            validateCaptureResolutionSelection()
             updateBitrateForCurrentPresetIfNeeded()
         }
         .onChange(of: dualCaptureSaveModeRawValue) { _, _ in

@@ -87,6 +87,106 @@ extension SettingsView {
         }
     }
 
+    var selectedCaptureDisplays: [DisplayOption] {
+        let display1 = displays.first { $0.id == captureDisplayID } ?? displays.first
+        guard captureModeRawValue == CaptureMode.dualSideBySide.rawValue else {
+            return display1.map { [$0] } ?? []
+        }
+
+        let display2 = displays.first { $0.id == captureDisplayID2 }
+        return [display1, display2].compactMap { $0 }
+    }
+
+    var isRetinaResolutionAvailable: Bool {
+        selectedCaptureDisplays.contains { $0.hasRetinaOutput }
+    }
+
+    var captureResolutionOptions: [CaptureResolution] {
+        CaptureResolution.allCases.filter { resolution in
+            resolution != .retina || isRetinaResolutionAvailable
+        }
+    }
+
+    func validateCaptureResolutionSelection() {
+        guard !displays.isEmpty else { return }
+
+        if captureResolutionRawValue == CaptureResolution.retina.rawValue,
+           !isRetinaResolutionAvailable {
+            captureResolutionRawValue = CaptureResolution.native.rawValue
+        }
+    }
+
+    var effectiveVideoDimensionsLabel: String {
+        let dimensions = effectiveVideoDimensions(resolutionRawValue: captureResolutionRawValue)
+        return "Output: \(dimensions.width) × \(dimensions.height)"
+    }
+
+    var dualResolutionDetailLabel: String? {
+        guard captureModeRawValue == CaptureMode.dualSideBySide.rawValue else {
+            return nil
+        }
+
+        let display1 = displays.first { $0.id == captureDisplayID } ?? displays.first
+        let display2 = displays.first { $0.id == captureDisplayID2 }
+        let dimensions1 = dimensions(
+            for: display1,
+            fallback: nil,
+            resolutionRawValue: captureResolutionRawValue
+        )
+        let dimensions2 = dimensions(
+            for: display2,
+            fallback: display1,
+            resolutionRawValue: captureResolutionRawValue
+        )
+
+        if dualCaptureSaveModeRawValue == DualCaptureSaveMode.separateFiles.rawValue {
+            return "Separate files: Display 1 \(dimensions1.width) × \(dimensions1.height), Display 2 \(dimensions2.width) × \(dimensions2.height)."
+        }
+
+        return "Side-by-side combines Display 1 \(dimensions1.width) × \(dimensions1.height) + Display 2 \(dimensions2.width) × \(dimensions2.height)."
+    }
+
+    var customResolutionAspectLabel: String? {
+        guard captureResolutionRawValue == CaptureResolution.custom.rawValue else {
+            return nil
+        }
+
+        let display = displays.first { $0.id == captureDisplayID } ?? displays.first
+        guard let display, display.width > 0, display.height > 0, customCaptureHeight > 0 else {
+            return nil
+        }
+
+        let displayAspect = Double(display.width) / Double(display.height)
+        let customAspect = Double(customCaptureWidth) / Double(customCaptureHeight)
+        guard abs(displayAspect - customAspect) > 0.02 else {
+            return nil
+        }
+
+        let matchedHeight = Int((Double(customCaptureWidth) / displayAspect).rounded())
+        return "Tip: this does not match the display aspect. \(customCaptureWidth) × \(matchedHeight) would preserve the selected display shape."
+    }
+
+    var resolutionHelpLabel: String {
+        switch CaptureResolution(rawValue: captureResolutionRawValue) {
+        case .native:
+            return "Current uses the logical size macOS reports for the display."
+        case .retina:
+            if captureModeRawValue == CaptureMode.dualSideBySide.rawValue {
+                return "Retina applies per display. HiDPI displays use backing pixels; non-Retina displays stay at their current size."
+            }
+            return "Retina keeps your Mac UI size the same but records up to the display's backing pixel size when available."
+        case .half:
+            return "Half records at half of the current logical display size."
+        case .custom:
+            if captureModeRawValue == CaptureMode.dualSideBySide.rawValue {
+                return "Custom forces each display stream to the exact width and height you choose, rescaling each capture if needed."
+            }
+            return "Custom forces the saved video to the exact width and height you choose, rescaling the capture if needed."
+        case .none:
+            return "Output size is based on the selected display and resolution mode."
+        }
+    }
+
     func handleBitrateSliderEditingChanged(_ isEditing: Bool) {
         bitrateSliderIsEditing = isEditing
 
@@ -145,34 +245,21 @@ extension SettingsView {
     func effectiveVideoDimensions(resolutionRawValue: String) -> (width: Int, height: Int) {
         let display1 = displays.first { $0.id == captureDisplayID } ?? displays.first
         let display2 = displays.first { $0.id == captureDisplayID2 }
-        let nativeWidth = display1?.width ?? 2560
-        let nativeHeight = display1?.height ?? 1440
-
-        let singleDimensions: (width: Int, height: Int)
-        switch resolutionRawValue {
-        case CaptureResolution.half.rawValue:
-            singleDimensions = (nativeWidth / 2, nativeHeight / 2)
-        case CaptureResolution.custom.rawValue:
-            singleDimensions = (customCaptureWidth, customCaptureHeight)
-        default:
-            singleDimensions = (nativeWidth, nativeHeight)
-        }
+        let singleDimensions = dimensions(
+            for: display1,
+            fallback: nil,
+            resolutionRawValue: resolutionRawValue
+        )
 
         guard captureModeRawValue == CaptureMode.dualSideBySide.rawValue else {
             return singleDimensions
         }
 
-        let secondNativeWidth = display2?.width ?? nativeWidth
-        let secondNativeHeight = display2?.height ?? nativeHeight
-        let secondDimensions: (width: Int, height: Int)
-        switch resolutionRawValue {
-        case CaptureResolution.half.rawValue:
-            secondDimensions = (secondNativeWidth / 2, secondNativeHeight / 2)
-        case CaptureResolution.custom.rawValue:
-            secondDimensions = (customCaptureWidth, customCaptureHeight)
-        default:
-            secondDimensions = (secondNativeWidth, secondNativeHeight)
-        }
+        let secondDimensions = dimensions(
+            for: display2,
+            fallback: display1,
+            resolutionRawValue: resolutionRawValue
+        )
 
         if dualCaptureSaveModeRawValue == DualCaptureSaveMode.separateFiles.rawValue {
             return singleDimensions.width * singleDimensions.height >= secondDimensions.width * secondDimensions.height
@@ -184,5 +271,37 @@ extension SettingsView {
             width: singleDimensions.width + secondDimensions.width,
             height: max(singleDimensions.height, secondDimensions.height)
         )
+    }
+
+    func dimensions(
+        for display: DisplayOption?,
+        fallback: DisplayOption?,
+        resolutionRawValue: String
+    ) -> (width: Int, height: Int) {
+        let resolvedDisplay = display ?? fallback
+        let width = resolvedDisplay?.width ?? 2560
+        let height = resolvedDisplay?.height ?? 1440
+
+        switch resolutionRawValue {
+        case CaptureResolution.half.rawValue:
+            return (width / 2, height / 2)
+        case CaptureResolution.retina.rawValue:
+            return (
+                AppSettings.retinaPixelDimension(
+                    for: width,
+                    pointPixelScale: resolvedDisplay?.pointPixelScale ?? 1.0,
+                    maxPixelDimension: resolvedDisplay?.pixelWidth
+                ),
+                AppSettings.retinaPixelDimension(
+                    for: height,
+                    pointPixelScale: resolvedDisplay?.pointPixelScale ?? 1.0,
+                    maxPixelDimension: resolvedDisplay?.pixelHeight
+                )
+            )
+        case CaptureResolution.custom.rawValue:
+            return (customCaptureWidth, customCaptureHeight)
+        default:
+            return (width, height)
+        }
     }
 }

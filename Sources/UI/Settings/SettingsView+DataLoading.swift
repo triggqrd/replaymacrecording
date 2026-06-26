@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreGraphics
 import Defaults
 @preconcurrency import ScreenCaptureKit
 
@@ -33,11 +34,21 @@ extension SettingsView {
         do {
             let shareableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let options = shareableContent.displays.map { display in
-                DisplayOption(
+                let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+                let pointPixelScale = max(Double(filter.pointPixelScale), 1.0)
+                let displayID = CGDirectDisplayID(display.displayID)
+                let displayMode = CGDisplayCopyDisplayMode(displayID)
+                let pixelWidth = max(CGDisplayPixelsWide(displayID), displayMode?.pixelWidth ?? 0)
+                let pixelHeight = max(CGDisplayPixelsHigh(displayID), displayMode?.pixelHeight ?? 0)
+
+                return DisplayOption(
                     id: String(display.displayID),
-                    name: "Display \(display.displayID) (\(display.width)x\(display.height))",
+                    name: "Display \(display.displayID) (\(display.width)x\(display.height) logical)",
                     width: Int(display.width),
-                    height: Int(display.height)
+                    height: Int(display.height),
+                    pointPixelScale: pointPixelScale,
+                    pixelWidth: pixelWidth,
+                    pixelHeight: pixelHeight
                 )
             }
 
@@ -58,6 +69,8 @@ extension SettingsView {
                     if !remainingForDisplay2.contains(where: { $0.id == captureDisplayID2 }) {
                         captureDisplayID2 = remainingForDisplay2.first?.id ?? ""
                     }
+
+                    validateCaptureResolutionSelection()
                 }
             }
         } catch {

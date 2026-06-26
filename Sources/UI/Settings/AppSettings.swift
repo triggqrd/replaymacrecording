@@ -20,6 +20,7 @@ public enum VideoCodec: String, CaseIterable, Identifiable {
 
 public enum CaptureResolution: String, CaseIterable, Identifiable {
     case native
+    case retina
     case half
     case custom
 
@@ -28,7 +29,9 @@ public enum CaptureResolution: String, CaseIterable, Identifiable {
     public var title: String {
         switch self {
         case .native:
-            return "Native"
+            return "Current"
+        case .retina:
+            return "Retina"
         case .half:
             return "Half"
         case .custom:
@@ -226,10 +229,44 @@ public enum AppSettings {
         return (videoPerBuffer, audioPerBuffer)
     }
 
-    public static func scaledDimensions(displayWidth: Int, displayHeight: Int) -> (width: Int, height: Int) {
+    public static func retinaPixelDimension(
+        for pointDimension: Int,
+        pointPixelScale: Double,
+        maxPixelDimension: Int? = nil
+    ) -> Int {
+        let safeScale = max(pointPixelScale, 1.0)
+        let scaledDimension = max(Int((Double(pointDimension) * safeScale).rounded()), 1)
+
+        guard let maxPixelDimension, maxPixelDimension > 0 else {
+            return scaledDimension
+        }
+
+        return min(scaledDimension, maxPixelDimension)
+    }
+
+    public static func scaledDimensions(
+        displayWidth: Int,
+        displayHeight: Int,
+        pointPixelScale: Double = 1.0,
+        maxPixelWidth: Int? = nil,
+        maxPixelHeight: Int? = nil
+    ) -> (width: Int, height: Int) {
         switch captureResolution {
         case CaptureResolution.half.rawValue:
             return (displayWidth / 2, displayHeight / 2)
+        case CaptureResolution.retina.rawValue:
+            return (
+                retinaPixelDimension(
+                    for: displayWidth,
+                    pointPixelScale: pointPixelScale,
+                    maxPixelDimension: maxPixelWidth
+                ),
+                retinaPixelDimension(
+                    for: displayHeight,
+                    pointPixelScale: pointPixelScale,
+                    maxPixelDimension: maxPixelHeight
+                )
+            )
         case CaptureResolution.custom.rawValue:
             return (customCaptureWidth, customCaptureHeight)
         default:

@@ -47,6 +47,35 @@ enum GIFExportError: LocalizedError {
     }
 }
 
+private final class GIFFrameCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private let total: Int
+    private var collected: [(time: Double, image: CGImage)] = []
+    private var processed = 0
+
+    init(total: Int) {
+        self.total = total
+    }
+
+    func record(requestedTime: CMTime, image: CGImage?) -> [CGImage]? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        if let image {
+            collected.append((requestedTime.seconds, image))
+        }
+
+        processed += 1
+        guard processed == total else {
+            return nil
+        }
+
+        return collected
+            .sorted { $0.time < $1.time }
+            .map(\.image)
+    }
+}
+
 /// Renders a time range of a video into an animated, looping GIF.
 enum GIFExporter {
     /// - Parameters:
@@ -142,26 +171,12 @@ enum GIFExporter {
         times: [CMTime]
     ) async -> [CGImage] {
         await withCheckedContinuation { continuation in
-            var collected: [(time: Double, image: CGImage)] = []
-            var processed = 0
-            let total = times.count
-            let lock = NSLock()
+            let collector = GIFFrameCollector(total: times.count)
 
             generator.generateCGImagesAsynchronously(
                 forTimes: times.map { NSValue(time: $0) }
             ) { requestedTime, image, _, _, _ in
-                lock.lock()
-                if let image {
-                    collected.append((requestedTime.seconds, image))
-                }
-                processed += 1
-                let isDone = processed == total
-                lock.unlock()
-
-                if isDone {
-                    let ordered = collected
-                        .sorted { $0.time < $1.time }
-                        .map(\.image)
+                if let ordered = collector.record(requestedTime: requestedTime, image: image) {
                     continuation.resume(returning: ordered)
                 }
             }

@@ -1,4 +1,5 @@
 @preconcurrency import ScreenCaptureKit
+import CoreGraphics
 import CoreMedia
 import CoreVideo
 import os.log
@@ -8,6 +9,9 @@ public struct CaptureConfig: Sendable {
     public let height: Int
     public let sourceWidth: Int
     public let sourceHeight: Int
+    public let sourcePointPixelScale: Double
+    public let sourcePixelWidth: Int
+    public let sourcePixelHeight: Int
     public let fps: Int
 }
 
@@ -238,6 +242,11 @@ public actor CaptureManager {
         }
 
         let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+        let pointPixelScale = max(Double(filter.pointPixelScale), 1.0)
+        let displayID = CGDirectDisplayID(display.displayID)
+        let displayMode = CGDisplayCopyDisplayMode(displayID)
+        let pixelWidth = max(CGDisplayPixelsWide(displayID), displayMode?.pixelWidth ?? 0)
+        let pixelHeight = max(CGDisplayPixelsHigh(displayID), displayMode?.pixelHeight ?? 0)
 
         let captureWidth = outputWidth ?? Int(display.width)
         let captureHeight = outputHeight ?? Int(display.height)
@@ -270,6 +279,9 @@ public actor CaptureManager {
             height: captureHeight,
             sourceWidth: Int(display.width),
             sourceHeight: Int(display.height),
+            sourcePointPixelScale: pointPixelScale,
+            sourcePixelWidth: pixelWidth,
+            sourcePixelHeight: pixelHeight,
             fps: fps
         )
     }
@@ -314,6 +326,16 @@ public actor CaptureManager {
 
         let filter1 = SCContentFilter(display: display1, excludingApplications: [], exceptingWindows: [])
         let filter2 = SCContentFilter(display: display2, excludingApplications: [], exceptingWindows: [])
+        let pointPixelScale1 = max(Double(filter1.pointPixelScale), 1.0)
+        let pointPixelScale2 = max(Double(filter2.pointPixelScale), 1.0)
+        let displayID1 = CGDirectDisplayID(display1.displayID)
+        let displayID2 = CGDirectDisplayID(display2.displayID)
+        let displayMode1 = CGDisplayCopyDisplayMode(displayID1)
+        let displayMode2 = CGDisplayCopyDisplayMode(displayID2)
+        let pixelWidth1 = max(CGDisplayPixelsWide(displayID1), displayMode1?.pixelWidth ?? 0)
+        let pixelHeight1 = max(CGDisplayPixelsHigh(displayID1), displayMode1?.pixelHeight ?? 0)
+        let pixelWidth2 = max(CGDisplayPixelsWide(displayID2), displayMode2?.pixelWidth ?? 0)
+        let pixelHeight2 = max(CGDisplayPixelsHigh(displayID2), displayMode2?.pixelHeight ?? 0)
 
         let capWidth1 = outputWidth1 ?? Int(display1.width)
         let capHeight1 = outputHeight1 ?? Int(display1.height)
@@ -364,6 +386,9 @@ public actor CaptureManager {
                 height: capHeight1,
                 sourceWidth: Int(display1.width),
                 sourceHeight: Int(display1.height),
+                sourcePointPixelScale: pointPixelScale1,
+                sourcePixelWidth: pixelWidth1,
+                sourcePixelHeight: pixelHeight1,
                 fps: fps
             ),
             config2: CaptureConfig(
@@ -371,6 +396,9 @@ public actor CaptureManager {
                 height: capHeight2,
                 sourceWidth: Int(display2.width),
                 sourceHeight: Int(display2.height),
+                sourcePointPixelScale: pointPixelScale2,
+                sourcePixelWidth: pixelWidth2,
+                sourcePixelHeight: pixelHeight2,
                 fps: fps
             )
         )

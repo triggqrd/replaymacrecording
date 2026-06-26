@@ -130,11 +130,29 @@ extension AppDelegate {
                     if let dualConfigs {
                         originalDualWidth1 = dualConfigs.config1.sourceWidth
                         originalDualHeight1 = dualConfigs.config1.sourceHeight
+                        originalDualPointPixelScale1 = dualConfigs.config1.sourcePointPixelScale
+                        originalDualPixelWidth1 = dualConfigs.config1.sourcePixelWidth
+                        originalDualPixelHeight1 = dualConfigs.config1.sourcePixelHeight
                         originalDualWidth2 = dualConfigs.config2.sourceWidth
                         originalDualHeight2 = dualConfigs.config2.sourceHeight
+                        originalDualPointPixelScale2 = dualConfigs.config2.sourcePointPixelScale
+                        originalDualPixelWidth2 = dualConfigs.config2.sourcePixelWidth
+                        originalDualPixelHeight2 = dualConfigs.config2.sourcePixelHeight
 
-                        let scaled1 = AppSettings.scaledDimensions(displayWidth: originalDualWidth1, displayHeight: originalDualHeight1)
-                        let scaled2 = AppSettings.scaledDimensions(displayWidth: originalDualWidth2, displayHeight: originalDualHeight2)
+                        let scaled1 = AppSettings.scaledDimensions(
+                            displayWidth: originalDualWidth1,
+                            displayHeight: originalDualHeight1,
+                            pointPixelScale: originalDualPointPixelScale1,
+                            maxPixelWidth: originalDualPixelWidth1,
+                            maxPixelHeight: originalDualPixelHeight1
+                        )
+                        let scaled2 = AppSettings.scaledDimensions(
+                            displayWidth: originalDualWidth2,
+                            displayHeight: originalDualHeight2,
+                            pointPixelScale: originalDualPointPixelScale2,
+                            maxPixelWidth: originalDualPixelWidth2,
+                            maxPixelHeight: originalDualPixelHeight2
+                        )
 
                         try await captureManager.updateDualStreamConfigurations(
                             fps: fps,
@@ -171,7 +189,7 @@ extension AppDelegate {
                         isDualMode = true
                         syncMemoryCapsToSettings()
 
-                        print("Dual capture started: Display1=\(originalDualWidth1)x\(originalDualHeight1) -> \(scaled1.width)x\(scaled1.height), Display2=\(originalDualWidth2)x\(originalDualHeight2) -> \(scaled2.width)x\(scaled2.height), Composite=\(compositeWidth)x\(compositeHeight)")
+                        print("Dual capture started: Display1=\(originalDualWidth1)x\(originalDualHeight1) @\(originalDualPointPixelScale1)x -> \(scaled1.width)x\(scaled1.height), Display2=\(originalDualWidth2)x\(originalDualHeight2) @\(originalDualPointPixelScale2)x -> \(scaled2.width)x\(scaled2.height), Composite=\(compositeWidth)x\(compositeHeight)")
                     }
                 } else {
                     try await startSingleDisplayCapture(
@@ -246,8 +264,17 @@ extension AppDelegate {
 
         originalDisplayWidth = config.sourceWidth
         originalDisplayHeight = config.sourceHeight
+        originalDisplayPointPixelScale = config.sourcePointPixelScale
+        originalDisplayPixelWidth = config.sourcePixelWidth
+        originalDisplayPixelHeight = config.sourcePixelHeight
 
-        let scaled = AppSettings.scaledDimensions(displayWidth: originalDisplayWidth, displayHeight: originalDisplayHeight)
+        let scaled = AppSettings.scaledDimensions(
+            displayWidth: originalDisplayWidth,
+            displayHeight: originalDisplayHeight,
+            pointPixelScale: originalDisplayPointPixelScale,
+            maxPixelWidth: originalDisplayPixelWidth,
+            maxPixelHeight: originalDisplayPixelHeight
+        )
 
         try await captureManager.updateStreamConfiguration(
             fps: fps,
@@ -267,7 +294,7 @@ extension AppDelegate {
         isDualMode = false
         syncMemoryCapsToSettings()
 
-        print("Single capture started: Display=\(originalDisplayWidth)x\(originalDisplayHeight) -> \(scaled.width)x\(scaled.height)")
+        print("Single capture started: Display=\(originalDisplayWidth)x\(originalDisplayHeight) @\(originalDisplayPointPixelScale)x -> \(scaled.width)x\(scaled.height)")
     }
 
     func stopCapturePipeline() {

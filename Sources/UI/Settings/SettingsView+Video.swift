@@ -55,10 +55,20 @@ extension SettingsView {
 
             Section {
                 Picker("Resolution", selection: $captureResolutionRawValue) {
-                    ForEach(CaptureResolution.allCases) { mode in
+                    ForEach(captureResolutionOptions) { mode in
                         Text(mode.title).tag(mode.rawValue)
                     }
                 }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(effectiveVideoDimensionsLabel)
+                    if let dualResolutionDetailLabel {
+                        Text(dualResolutionDetailLabel)
+                    }
+                    Text(resolutionHelpLabel)
+                }
+                .foregroundStyle(AppTheme.textSecondary)
+                .font(.system(size: 12, design: .rounded))
 
                 if captureResolutionRawValue == CaptureResolution.custom.rawValue {
                     Stepper(value: $customCaptureWidth, in: 640...7680, step: 16) {
@@ -66,6 +76,12 @@ extension SettingsView {
                     }
                     Stepper(value: $customCaptureHeight, in: 360...4320, step: 16) {
                         Text("Custom height: \(customCaptureHeight)")
+                    }
+
+                    if let customResolutionAspectLabel {
+                        Label(customResolutionAspectLabel, systemImage: "aspectratio")
+                            .foregroundStyle(AppTheme.textSecondary)
+                            .font(.system(size: 12, design: .rounded))
                     }
                 }
 

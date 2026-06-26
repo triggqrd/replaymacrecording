@@ -57,12 +57,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     // scaling can be re-applied on each pipeline-shape change.
     var originalDisplayWidth: Int = 0
     var originalDisplayHeight: Int = 0
+    var originalDisplayPointPixelScale: Double = 1.0
+    var originalDisplayPixelWidth: Int = 0
+    var originalDisplayPixelHeight: Int = 0
     var currentFPS: Int = 60
     var isDualMode: Bool = false
     var originalDualWidth1: Int = 0
     var originalDualHeight1: Int = 0
+    var originalDualPointPixelScale1: Double = 1.0
+    var originalDualPixelWidth1: Int = 0
+    var originalDualPixelHeight1: Int = 0
     var originalDualWidth2: Int = 0
     var originalDualHeight2: Int = 0
+    var originalDualPointPixelScale2: Double = 1.0
+    var originalDualPixelWidth2: Int = 0
+    var originalDualPixelHeight2: Int = 0
     var lastMicEnabled = AppSettings.captureMicrophone
     var lastMicDeviceID = AppSettings.microphoneID
     var hasNotifiedMicDenied = false

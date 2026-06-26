@@ -45,4 +45,24 @@ final class AppSettingsMemoryCapTests: XCTestCase {
 
         XCTAssertGreaterThanOrEqual(caps.audioPerBuffer, 8 * 1024 * 1024)
     }
+
+    func testRetinaPixelDimensionUsesBackingScale() {
+        XCTAssertEqual(AppSettings.retinaPixelDimension(for: 1512, pointPixelScale: 2.0), 3024)
+    }
+
+    func testRetinaPixelDimensionFallsBackToCurrentSizeForOneTimesDisplays() {
+        XCTAssertEqual(AppSettings.retinaPixelDimension(for: 1920, pointPixelScale: 1.0), 1920)
+        XCTAssertEqual(AppSettings.retinaPixelDimension(for: 1920, pointPixelScale: 0.0), 1920)
+    }
+
+    func testRetinaPixelDimensionIsCappedAtDisplayPixelSize() {
+        XCTAssertEqual(
+            AppSettings.retinaPixelDimension(
+                for: 3024,
+                pointPixelScale: 2.0,
+                maxPixelDimension: 3024
+            ),
+            3024
+        )
+    }
 }

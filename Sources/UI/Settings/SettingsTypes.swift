@@ -33,6 +33,29 @@ struct DisplayOption: Identifiable, Hashable {
     let name: String
     let width: Int
     let height: Int
+    let pointPixelScale: Double
+    let pixelWidth: Int
+    let pixelHeight: Int
+
+    var retinaWidth: Int {
+        AppSettings.retinaPixelDimension(
+            for: width,
+            pointPixelScale: pointPixelScale,
+            maxPixelDimension: pixelWidth
+        )
+    }
+
+    var retinaHeight: Int {
+        AppSettings.retinaPixelDimension(
+            for: height,
+            pointPixelScale: pointPixelScale,
+            maxPixelDimension: pixelHeight
+        )
+    }
+
+    var hasRetinaOutput: Bool {
+        retinaWidth > width || retinaHeight > height
+    }
 }
 
 struct MicrophoneOption: Identifiable, Hashable {

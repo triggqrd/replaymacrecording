@@ -105,6 +105,10 @@ For dual-display recording, Retina is applied per display. HiDPI displays use th
 
 </details>
 
+## Support
+
+If you like ReplayMac and want to support its development, consider leaving a tip on [Ko-fi](https://ko-fi.com/picccassso). 🙂
+
 ## License
 
 ReplayMac is free and source-available.

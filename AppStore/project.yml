@@ -1,0 +1,49 @@
+# XcodeGen spec for the Mac App Store wrapper project.
+#
+# The SwiftPM package at the repo root stays the source of truth; this app
+# target compiles Sources/App directly and links the package's ReplayMacKit
+# library product. Regenerate the project after changing this file:
+#
+#   xcodegen generate --spec AppStore/project.yml
+#
+# Direct/GitHub releases keep using ./build-app.sh; this project exists for
+# App Store archiving and upload (Product > Archive in Xcode, or
+# xcodebuild archive). Once enrolled in the developer program, set your
+# team in Signing & Capabilities (or DEVELOPMENT_TEAM below).
+name: ReplayMac
+options:
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "15.0"
+packages:
+  ReplayMacPackage:
+    path: ..
+  Defaults:
+    url: https://github.com/sindresorhus/Defaults
+    from: 9.0.0
+targets:
+  ReplayMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: ../Sources/App
+        group: App
+      - path: ../Resources/ReplayMac.icns
+        buildPhase: resources
+    dependencies:
+      - package: ReplayMacPackage
+        product: ReplayMacKit
+      - package: Defaults
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.replaymac.app
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: ../Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ../Resources/ReplayMac.appstore.entitlements
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "6.0"
+        # Compiles out the GitHub update checker entry point; the App Store
+        # handles updates (see AppDelegate+Updates.swift).
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: APPSTORE
+    scheme:
+      testTargets: []

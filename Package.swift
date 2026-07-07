@@ -5,7 +5,14 @@ let package = Package(
     name: "ReplayMac",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "ReplayMac", targets: ["ReplayMac"])
+        .executable(name: "ReplayMac", targets: ["ReplayMac"]),
+        // Library product consumed by the Xcode wrapper project
+        // (AppStore/ReplayMac.xcodeproj), whose app target compiles
+        // Sources/App itself and links these modules.
+        .library(
+            name: "ReplayMacKit",
+            targets: ["Capture", "Encode", "RingBuffer", "Save", "Audio", "UI", "Hotkeys", "Feedback"]
+        )
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.0"),

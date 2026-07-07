@@ -15,37 +15,10 @@ public enum UpdateChecker {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     }
 
-    // Mac App Store builds (-DAPPSTORE) must not point users at out-of-store
-    // downloads, so the GitHub release check is compiled out entirely.
-    #if !APPSTORE
-    private static let latestReleaseAPIURL = URL(
-        string: "https://api.github.com/repos/picccassso/ReplayMac/releases/latest"
-    )!
-
-    public static func checkForUpdate(
-        currentVersion: String,
-        session: URLSession = .shared
-    ) async throws -> AvailableUpdate? {
-        var request = URLRequest(url: latestReleaseAPIURL)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
-        request.setValue("ReplayMac", forHTTPHeaderField: "User-Agent")
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode) else {
-            throw UpdateCheckError.invalidResponse
-        }
-
-        let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
-        guard isVersion(release.tagName, newerThan: currentVersion) else {
-            return nil
-        }
-
-        return AvailableUpdate(version: release.tagName, releaseURL: release.htmlURL)
-    }
-    #endif
-
+    // The GitHub release fetch itself lives in the app target
+    // (AppDelegate+Updates.swift) so that App Store builds, which compile
+    // the app target with -DAPPSTORE, contain no trace of it. This module
+    // keeps only the pure version comparison used by the fetch and by tests.
     public static func isVersion(_ candidate: String, newerThan current: String) -> Bool {
         guard let candidateComponents = versionComponents(from: candidate),
               let currentComponents = versionComponents(from: current) else {
@@ -81,18 +54,3 @@ public enum UpdateChecker {
     }
 }
 
-#if !APPSTORE
-private struct GitHubRelease: Decodable {
-    let tagName: String
-    let htmlURL: URL
-
-    enum CodingKeys: String, CodingKey {
-        case tagName = "tag_name"
-        case htmlURL = "html_url"
-    }
-}
-
-private enum UpdateCheckError: Error {
-    case invalidResponse
-}
-#endif

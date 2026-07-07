@@ -8,6 +8,17 @@ INFO_PLIST="$ROOT_DIR/Resources/Info.plist"
 ENTITLEMENTS="$ROOT_DIR/Resources/ReplayMac.dev.entitlements"
 ICON_PATH="$ROOT_DIR/Resources/ReplayMac.icns"
 
+# --appstore: Mac App Store variant — compiles out the GitHub update checker
+# (-DAPPSTORE) and signs with the App Store entitlements (no network client).
+# Local testing only; the actual MAS submission still needs Distribution
+# signing and a provisioning profile via Xcode/Transporter.
+APPSTORE_FLAG=""
+if [ "${1:-}" = "--appstore" ]; then
+  APPSTORE_FLAG="-Xswiftc -DAPPSTORE"
+  ENTITLEMENTS="$ROOT_DIR/Resources/ReplayMac.appstore.entitlements"
+  printf 'Building Mac App Store variant (update checker disabled).\n'
+fi
+
 resolve_signing_identity() {
   if [ -n "${SIGNING_IDENTITY:-}" ]; then
     printf '%s\n' "$SIGNING_IDENTITY"
@@ -39,7 +50,8 @@ else
 fi
 
 # Build once so SPM generates resource bundle accessors
-swift build -c release --package-path "$ROOT_DIR"
+# shellcheck disable=SC2086  # APPSTORE_FLAG intentionally word-splits into two args
+swift build -c release --package-path "$ROOT_DIR" $APPSTORE_FLAG
 
 # Patch generated accessors to load bundles from Contents/Resources
 # instead of the app root, which avoids breaking code signing.
@@ -50,7 +62,8 @@ for accessor in "$ROOT_DIR"/.build/arm64-apple-macosx/release/*.build/DerivedSou
 done
 
 # Rebuild so the patched accessors are compiled in
-swift build -c release --package-path "$ROOT_DIR"
+# shellcheck disable=SC2086
+swift build -c release --package-path "$ROOT_DIR" $APPSTORE_FLAG
 
 BIN_DIR="$(swift build -c release --show-bin-path --package-path "$ROOT_DIR")"
 BIN_PATH="$BIN_DIR/$BIN_NAME"

@@ -3,6 +3,10 @@ import UI
 @MainActor
 extension AppDelegate {
     func checkForAvailableUpdate() {
+        // App Store builds ship updates through the store; the menu's
+        // "Update Available" item never appears because nothing sets
+        // menuBarState.availableUpdate.
+        #if !APPSTORE
         guard let currentVersion = UpdateChecker.currentAppVersion else {
             print("Skipping update check: app version is unavailable.")
             return
@@ -17,6 +21,7 @@ extension AppDelegate {
                 print("Update check failed: \(error.localizedDescription)")
             }
         }
+        #endif
     }
 }
 

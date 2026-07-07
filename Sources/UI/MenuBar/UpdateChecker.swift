@@ -11,13 +11,16 @@ public struct AvailableUpdate: Equatable, Sendable {
 }
 
 public enum UpdateChecker {
-    private static let latestReleaseAPIURL = URL(
-        string: "https://api.github.com/repos/picccassso/ReplayMac/releases/latest"
-    )!
-
     public static var currentAppVersion: String? {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     }
+
+    // Mac App Store builds (-DAPPSTORE) must not point users at out-of-store
+    // downloads, so the GitHub release check is compiled out entirely.
+    #if !APPSTORE
+    private static let latestReleaseAPIURL = URL(
+        string: "https://api.github.com/repos/picccassso/ReplayMac/releases/latest"
+    )!
 
     public static func checkForUpdate(
         currentVersion: String,
@@ -41,6 +44,7 @@ public enum UpdateChecker {
 
         return AvailableUpdate(version: release.tagName, releaseURL: release.htmlURL)
     }
+    #endif
 
     public static func isVersion(_ candidate: String, newerThan current: String) -> Bool {
         guard let candidateComponents = versionComponents(from: candidate),
@@ -77,6 +81,7 @@ public enum UpdateChecker {
     }
 }
 
+#if !APPSTORE
 private struct GitHubRelease: Decodable {
     let tagName: String
     let htmlURL: URL
@@ -90,3 +95,4 @@ private struct GitHubRelease: Decodable {
 private enum UpdateCheckError: Error {
     case invalidResponse
 }
+#endif

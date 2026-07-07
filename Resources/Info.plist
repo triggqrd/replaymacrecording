@@ -22,6 +22,12 @@
     <string>1.6.6</string>
     <key>LSMinimumSystemVersion</key>
     <string>15.0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.video</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Alex (picccassso)</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>NSMicrophoneUsageDescription</key>
     <string>ReplayMac needs microphone access to include your voice in captured clips.</string>
     <key>NSAudioCaptureUsageDescription</key>

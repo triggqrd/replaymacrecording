@@ -105,6 +105,10 @@ For dual-display recording, Retina is applied per display. HiDPI displays use th
 
 </details>
 
+## Troubleshooting
+
+**Can't record a hotkey in Settings?** Some macOS versions (currently the macOS 27 "Golden Gate" betas) have a system bug that stops the shortcut recorder from registering key presses. You can set every hotkey from the Terminal instead — see [Setting ReplayMac Hotkeys from the Terminal](docs/manual-hotkey-setup.md).
+
 ## Support
 
 If you like ReplayMac and want to support its development, consider leaving a tip on [Ko-fi](https://ko-fi.com/picccassso). 🙂

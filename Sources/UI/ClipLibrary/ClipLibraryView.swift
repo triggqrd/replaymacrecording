@@ -281,12 +281,13 @@ public struct ClipLibraryView: View {
             TableColumn("Actions") { row in
                 HStack(spacing: 14) {
                     IconActionButton(icon: "play.fill", color: AppTheme.accent) {
-                        NSWorkspace.shared.open(row.info.fileURL)
+                        previewURL = row.info.fileURL
                     }
 
                     IconActionButton(icon: "scissors", color: AppTheme.accentSecondary) {
                         trimURL = row.info.fileURL
                     }
+                    .help("Trim & Export")
 
                     ClipShareLink(url: row.info.fileURL)
 
@@ -332,12 +333,13 @@ public struct ClipLibraryView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "scissors")
-                        Text("Trim")
+                        Text("Trim & Export")
                     }
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .help("Trim the clip, choose an audio track, and export as MP4 or GIF")
 
                 ShareLink(item: row.info.fileURL) {
                     Label("Share", systemImage: "square.and.arrow.up")
@@ -1100,9 +1102,127 @@ private enum ClipSharing {
     }
 }
 
+/// An audio track a clip player can solo, identified by its persistent track
+/// ID in the file. `allTracksID` is a sentinel for "play every track".
+private struct AudioTrackChoice: Identifiable, Hashable {
+    static let allTracksID: CMPersistentTrackID = -1
+
+    let id: CMPersistentTrackID
+    let label: String
+}
+
+private enum ClipAudioTracks {
+    /// Returns selectable audio tracks for the clip, or `[]` when the clip has
+    /// zero or one audio track (nothing to choose between).
+    ///
+    /// The save pipeline writes system audio before the microphone when
+    /// "Merge audio tracks" is off, so labels are assigned by track order.
+    static func choices(for asset: AVURLAsset) async -> [AudioTrackChoice] {
+        let tracks = (try? await asset.loadTracks(withMediaType: .audio)) ?? []
+        guard tracks.count > 1 else { return [] }
+        return tracks.enumerated().map { index, track in
+            AudioTrackChoice(id: track.trackID, label: label(forTrackAt: index))
+        }
+    }
+
+    private static func label(forTrackAt index: Int) -> String {
+        switch index {
+        case 0: return "System Audio"
+        case 1: return "Microphone"
+        default: return "Track \(index + 1)"
+        }
+    }
+
+    /// Mutes every audio track except the selected one (or unmutes all when
+    /// `selection` is `allTracksID`). Playback-only; the file is untouched.
+    @MainActor
+    static func apply(
+        selection: CMPersistentTrackID,
+        choices: [AudioTrackChoice],
+        to item: AVPlayerItem?
+    ) {
+        guard let item, !choices.isEmpty else { return }
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = choices.map { choice in
+            let parameters = AVMutableAudioMixInputParameters()
+            parameters.trackID = choice.id
+            let isAudible = selection == AudioTrackChoice.allTracksID || selection == choice.id
+            parameters.setVolume(isAudible ? 1 : 0, at: .zero)
+            return parameters
+        }
+        item.audioMix = mix
+    }
+
+    /// Builds a composition with the clip's video and only the selected audio
+    /// track, so an export drops the other tracks entirely. Falls back to the
+    /// original asset if the track is no longer present in the file.
+    @MainActor
+    static func soloComposition(
+        from asset: AVURLAsset,
+        audioTrackID: CMPersistentTrackID
+    ) async throws -> AVAsset {
+        let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+        guard let soloTrack = audioTracks.first(where: { $0.trackID == audioTrackID }) else {
+            return asset
+        }
+
+        let composition = AVMutableComposition()
+        let duration = try await asset.load(.duration)
+        let fullRange = CMTimeRange(start: .zero, duration: duration)
+
+        for videoTrack in try await asset.loadTracks(withMediaType: .video) {
+            guard let target = composition.addMutableTrack(
+                withMediaType: .video,
+                preferredTrackID: kCMPersistentTrackID_Invalid
+            ) else {
+                throw TrimExportError.cannotBuildComposition
+            }
+            try target.insertTimeRange(fullRange, of: videoTrack, at: .zero)
+            target.preferredTransform = try await videoTrack.load(.preferredTransform)
+        }
+
+        guard let target = composition.addMutableTrack(
+            withMediaType: .audio,
+            preferredTrackID: kCMPersistentTrackID_Invalid
+        ) else {
+            throw TrimExportError.cannotBuildComposition
+        }
+        try target.insertTimeRange(fullRange, of: soloTrack, at: .zero)
+
+        return composition
+    }
+}
+
+private struct AudioTrackPickerView: View {
+    let choices: [AudioTrackChoice]
+    @Binding var selection: CMPersistentTrackID
+    var help = "Choose which audio track you hear. Playback only — the file keeps all tracks."
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Label("Audio", systemImage: "speaker.wave.2")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(AppTheme.textSecondary)
+            Picker("Audio track", selection: $selection) {
+                Text("All Tracks").tag(AudioTrackChoice.allTracksID)
+                ForEach(choices) { choice in
+                    Text(choice.label).tag(choice.id)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 380)
+            .help(help)
+            Spacer()
+        }
+    }
+}
+
 private struct ClipPreviewView: View {
     let url: URL
     @State private var player: AVPlayer?
+    @State private var audioTrackChoices: [AudioTrackChoice] = []
+    @State private var selectedAudioTrackID = AudioTrackChoice.allTracksID
 
     var body: some View {
         VStack(spacing: 14) {
@@ -1120,22 +1240,36 @@ private struct ClipPreviewView: View {
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium, style: .continuous))
             }
 
+            if !audioTrackChoices.isEmpty {
+                AudioTrackPickerView(choices: audioTrackChoices, selection: $selectedAudioTrackID)
+            }
+
             Text(url.lastPathComponent)
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(AppTheme.textSecondary)
                 .lineLimit(1)
         }
         .padding(16)
-        .onAppear {
-            guard player == nil else { return }
-            let newPlayer = AVPlayer(url: url)
-            newPlayer.play()
-            player = newPlayer
+        .task {
+            await loadPlayer()
+        }
+        .onChange(of: selectedAudioTrackID) { _, newValue in
+            ClipAudioTracks.apply(selection: newValue, choices: audioTrackChoices, to: player?.currentItem)
         }
         .onDisappear {
             player?.pause()
             player = nil
         }
+    }
+
+    private func loadPlayer() async {
+        guard player == nil else { return }
+        let asset = AVURLAsset(url: url)
+        audioTrackChoices = await ClipAudioTracks.choices(for: asset)
+        let newPlayer = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+        ClipAudioTracks.apply(selection: selectedAudioTrackID, choices: audioTrackChoices, to: newPlayer.currentItem)
+        newPlayer.play()
+        player = newPlayer
     }
 }
 
@@ -1152,6 +1286,8 @@ private struct ClipTrimView: View {
     @State private var isExportingGIF = false
     @State private var gifWidth: GIFWidth = .medium
     @State private var errorMessage: String?
+    @State private var audioTrackChoices: [AudioTrackChoice] = []
+    @State private var selectedAudioTrackID = AudioTrackChoice.allTracksID
 
     private var isBusy: Bool { isExporting || isExportingGIF }
 
@@ -1199,6 +1335,14 @@ private struct ClipTrimView: View {
                 }
             }
             .font(.system(size: 12, weight: .medium, design: .rounded))
+
+            if !audioTrackChoices.isEmpty {
+                AudioTrackPickerView(
+                    choices: audioTrackChoices,
+                    selection: $selectedAudioTrackID,
+                    help: "Choose which audio track you hear. Export Trim keeps only the selected track (All Tracks keeps every track)."
+                )
+            }
 
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
@@ -1269,6 +1413,9 @@ private struct ClipTrimView: View {
         .task {
             await loadClip()
         }
+        .onChange(of: selectedAudioTrackID) { _, newValue in
+            ClipAudioTracks.apply(selection: newValue, choices: audioTrackChoices, to: player?.currentItem)
+        }
         .onDisappear {
             player?.pause()
             player = nil
@@ -1279,12 +1426,15 @@ private struct ClipTrimView: View {
         let asset = AVURLAsset(url: url)
         let loadedDuration = (try? await asset.load(.duration)) ?? .zero
         let seconds = max(CMTimeGetSeconds(loadedDuration), 0)
+        let choices = await ClipAudioTracks.choices(for: asset)
 
         await MainActor.run {
             duration = seconds
             trimStart = 0
             trimEnd = seconds
-            let newPlayer = AVPlayer(url: url)
+            audioTrackChoices = choices
+            let newPlayer = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            ClipAudioTracks.apply(selection: selectedAudioTrackID, choices: choices, to: newPlayer.currentItem)
             player = newPlayer
             newPlayer.play()
         }
@@ -1296,9 +1446,21 @@ private struct ClipTrimView: View {
 
         do {
             let asset = AVURLAsset(url: url)
+
+            // A solo track selection carries over to the export: the other
+            // audio tracks are dropped from the output file.
+            let soloChoice = audioTrackChoices.first { $0.id == selectedAudioTrackID }
+            let exportAsset: AVAsset
+            if let soloChoice {
+                exportAsset = try await ClipAudioTracks.soloComposition(from: asset, audioTrackID: soloChoice.id)
+            } else {
+                exportAsset = asset
+            }
+
+            let suffix = soloChoice.map { "Trimmed_\($0.label.filter { !$0.isWhitespace })" } ?? "Trimmed"
             let outputURL = try ClipMetadata.generateUniqueFileURL(
                 in: url.deletingLastPathComponent(),
-                suffix: "Trimmed"
+                suffix: suffix
             )
             let start = CMTime(seconds: trimStart, preferredTimescale: 600)
             let end = CMTime(seconds: trimEnd, preferredTimescale: 600)
@@ -1307,7 +1469,7 @@ private struct ClipTrimView: View {
             let preset: String
             if await AVAssetExportSession.compatibility(
                 ofExportPreset: AVAssetExportPresetPassthrough,
-                with: asset,
+                with: exportAsset,
                 outputFileType: .mp4
             ) {
                 preset = AVAssetExportPresetPassthrough
@@ -1315,7 +1477,7 @@ private struct ClipTrimView: View {
                 preset = AVAssetExportPresetHighestQuality
             }
 
-            guard let exportSession = AVAssetExportSession(asset: asset, presetName: preset) else {
+            guard let exportSession = AVAssetExportSession(asset: exportAsset, presetName: preset) else {
                 throw TrimExportError.cannotCreateSession
             }
 
@@ -1370,12 +1532,15 @@ private struct ClipTrimView: View {
 
 private enum TrimExportError: LocalizedError {
     case cannotCreateSession
+    case cannotBuildComposition
     case exportFailed
 
     var errorDescription: String? {
         switch self {
         case .cannotCreateSession:
             return "Unable to create a trim export session."
+        case .cannotBuildComposition:
+            return "Unable to prepare the selected audio track for export."
         case .exportFailed:
             return "Trim export did not complete."
         }

@@ -1,6 +1,8 @@
 import SwiftUI
 import AppKit
-import AVFoundation
+// @preconcurrency: Swift 6.1 (still served by GitHub's macos-latest runners)
+// rejects loadTracks' non-Sendable [AVAssetTrack] result; 6.3 accepts it.
+@preconcurrency import AVFoundation
 import AVKit
 import Save
 

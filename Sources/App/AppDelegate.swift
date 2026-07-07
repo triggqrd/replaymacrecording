@@ -82,6 +82,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     var hasNotifiedMicDenied = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Must run before anything touches the output directory: under the
+        // sandbox, access to a custom output folder only exists while the
+        // security-scoped bookmark is being accessed.
+        OutputDirectoryAccess.restore()
+
         NotificationManager.shared.requestAuthorization()
 
         configurePipelines()

@@ -118,6 +118,7 @@ extension SettingsView {
         Defaults[.outputDirectoryPath] = path
         UserDefaults.standard.set(path, forKey: "outputDirectoryPath")
         UserDefaults.standard.synchronize()
+        OutputDirectoryAccess.adopt(selectedURL)
     }
 
     func syncLaunchAtLoginState() {

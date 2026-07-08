@@ -4,6 +4,8 @@ ReplayMac is being built and maintained with the assistance of Kimi K2.6, GPT 5.
 
 Anthropic pls bring back Fable 5, I didn't get to try it :'). 
 
+Update: They ain't believe in us... CLAUDE DID! 
+
 AI was used for:
 - Writing and debugging Swift code
 - Fixing edge cases during development

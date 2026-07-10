@@ -3,6 +3,8 @@
 ## 1.6.7
 
 - First Mac App Store release: sandboxed build with security-scoped bookmarks for custom output folders; the App Store variant relies on the App Store for updates and makes no network connections
+- Add audio track selection to clip preview and trim export: when audio tracks are kept separate, Quick Preview and Trim offer an All Tracks / System Audio / Microphone picker, and Trim & Export drops unselected tracks from the output (passthrough, no re-encode) with the track name in the filename
+- Add a manual hotkey setup guide (docs/manual-hotkey-setup.md) for macOS versions where a system bug breaks the Settings shortcut recorder, with `defaults write` instructions for all six actions
 - Replace the pulsing menu-bar recording dot with a static one, eliminating a continuously repeating animation that redrew the status item while recording
 - Cap the displayed recording time at the configured replay window (quick replay, or extended replay when enabled) instead of counting the full session
 

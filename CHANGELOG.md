@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.7
+
+- First Mac App Store release: sandboxed build with security-scoped bookmarks for custom output folders; the App Store variant relies on the App Store for updates and makes no network connections
+- Replace the pulsing menu-bar recording dot with a static one, eliminating a continuously repeating animation that redrew the status item while recording
+- Cap the displayed recording time at the configured replay window (quick replay, or extended replay when enabled) instead of counting the full session
+
 ## 1.6.6
 
 - Recover long-buffer recording after writer failures: reset failed or cancelled writers immediately, remove incomplete segment files, and let the next sample start a fresh segment

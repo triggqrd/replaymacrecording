@@ -41,6 +41,8 @@ targets:
         INFOPLIST_FILE: ../Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: ../Resources/ReplayMac.appstore.entitlements
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: QZTBSUBN77
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": Apple Development
         SWIFT_VERSION: "6.0"
         # Compiles out the GitHub update checker entry point; the App Store
         # handles updates (see AppDelegate+Updates.swift).

@@ -1,9 +1,12 @@
+import Defaults
 import XCTest
 @testable import UI
 
 @MainActor
 final class MenuBarStateTests: XCTestCase {
-    func testRecordingDurationContinuesPastQuickReplayCapacity() {
+    func testRecordingDurationDisplayCapsAtQuickReplayCapacity() {
+        Defaults[.bufferDurationSeconds] = 30
+        Defaults[.longBufferEnabled] = false
         let state = MenuBarState()
         let start = Date(timeIntervalSinceReferenceDate: 1_000)
 
@@ -11,7 +14,24 @@ final class MenuBarStateTests: XCTestCase {
         state.updateRecordingElapsed(at: start.addingTimeInterval(95))
 
         XCTAssertEqual(state.recordingElapsedSeconds, 95)
+        XCTAssertEqual(state.formattedRecordingDuration, "00:30")
+    }
+
+    func testRecordingDurationDisplayCapsAtExtendedReplayCapacityWhenEnabled() {
+        Defaults[.bufferDurationSeconds] = 30
+        Defaults[.longBufferEnabled] = true
+        Defaults[.longBufferDurationMinutes] = 5
+        defer { Defaults[.longBufferEnabled] = false }
+        let state = MenuBarState()
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+
+        state.setRecording(true, at: start)
+        state.updateRecordingElapsed(at: start.addingTimeInterval(95))
+
         XCTAssertEqual(state.formattedRecordingDuration, "01:35")
+
+        state.updateRecordingElapsed(at: start.addingTimeInterval(400))
+        XCTAssertEqual(state.formattedRecordingDuration, "05:00")
     }
 
     func testRepeatedRecordingUpdateDoesNotResetElapsedTime() {

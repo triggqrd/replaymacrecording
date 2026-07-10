@@ -39,30 +39,3 @@ public struct AccentButtonStyle: ButtonStyle {
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
-
-public struct PulsingDotModifier: ViewModifier {
-    @State private var isPulsing = false
-
-    public init() {}
-
-    public func body(content: Content) -> some View {
-        content
-            .overlay(
-                GeometryReader { proxy in
-                    Circle()
-                        .fill(AppTheme.danger)
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .scaleEffect(isPulsing ? 1.6 : 1.0)
-                        .opacity(isPulsing ? 0.0 : 0.4)
-                        .animation(.easeOut(duration: 1.2).repeatForever(autoreverses: false), value: isPulsing)
-                        .onAppear { isPulsing = true }
-                }
-            )
-    }
-}
-
-public extension View {
-    func pulsingDot() -> some View {
-        modifier(PulsingDotModifier())
-    }
-}

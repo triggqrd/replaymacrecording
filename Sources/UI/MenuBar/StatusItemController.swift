@@ -343,13 +343,10 @@ private struct StatusBadgeView: View {
                     .foregroundStyle(AppTheme.danger)
             case .idle:
                 if state.isRecording {
-                    ZStack {
-                        Circle()
-                            .fill(AppTheme.danger)
-                            .frame(width: 8, height: 8)
-                            .pulsingDot()
-                    }
-                    .frame(width: 12, height: 12)
+                    Circle()
+                        .fill(AppTheme.danger)
+                        .frame(width: 8, height: 8)
+                        .frame(width: 12, height: 12)
                     Text(state.formattedRecordingDuration)
                         .foregroundStyle(AppTheme.textPrimary)
                 } else {

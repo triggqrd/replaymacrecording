@@ -112,8 +112,19 @@ public final class MenuBarState: ObservableObject {
         Self.formattedDuration(bufferedSeconds)
     }
 
+    /// Recording time shown to the user, capped at the largest configured
+    /// replay window — elapsed time beyond what can still be saved isn't
+    /// actionable.
+    public var displayedRecordingSeconds: TimeInterval {
+        let quickCap = TimeInterval(AppSettings.bufferDurationSeconds)
+        let cap = AppSettings.longBufferEnabled
+            ? max(quickCap, TimeInterval(AppSettings.longBufferDurationSeconds))
+            : quickCap
+        return min(recordingElapsedSeconds, cap)
+    }
+
     public var formattedRecordingDuration: String {
-        Self.formattedDuration(recordingElapsedSeconds)
+        Self.formattedDuration(displayedRecordingSeconds)
     }
 
     public var formattedExtendedBufferDuration: String {

@@ -5,6 +5,7 @@ import AppKit
 @preconcurrency import AVFoundation
 import AVKit
 import Save
+import UniformTypeIdentifiers
 
 public struct ClipLibraryView: View {
     @StateObject private var model = ClipLibraryViewModel()
@@ -545,14 +546,22 @@ public struct ClipLibraryView: View {
 
     private func exportWholeClipGIF(for row: ClipRow) async {
         let sourceURL = row.info.fileURL
-        gifExportingPath = sourceURL.path
-        defer { gifExportingPath = nil }
-
         let end = row.info.duration.isFinite && row.info.duration > 0 ? row.info.duration : 0
         guard end > 0 else { return }
 
+        let suggestedURL = GIFExporter.uniqueOutputURL(basedOn: sourceURL)
+        guard let outputURL = ExportDestinationPicker.chooseDestination(
+            suggestedURL: suggestedURL,
+            contentType: .gif,
+            title: "Export GIF"
+        ) else {
+            return
+        }
+
+        gifExportingPath = sourceURL.path
+        defer { gifExportingPath = nil }
+
         do {
-            let outputURL = GIFExporter.uniqueOutputURL(basedOn: sourceURL)
             try await GIFExporter.export(
                 sourceURL: sourceURL,
                 startSeconds: 0,
@@ -1445,6 +1454,7 @@ private struct ClipTrimView: View {
     private func exportTrimmedClip() async {
         isExporting = true
         errorMessage = nil
+        defer { isExporting = false }
 
         do {
             let asset = AVURLAsset(url: url)
@@ -1460,10 +1470,17 @@ private struct ClipTrimView: View {
             }
 
             let suffix = soloChoice.map { "Trimmed_\($0.label.filter { !$0.isWhitespace })" } ?? "Trimmed"
-            let outputURL = try ClipMetadata.generateUniqueFileURL(
+            let suggestedURL = try ClipMetadata.generateUniqueFileURL(
                 in: url.deletingLastPathComponent(),
                 suffix: suffix
             )
+            guard let outputURL = ExportDestinationPicker.chooseDestination(
+                suggestedURL: suggestedURL,
+                contentType: .mpeg4Movie,
+                title: "Export Trimmed Clip"
+            ) else {
+                return
+            }
             let start = CMTime(seconds: trimStart, preferredTimescale: 600)
             let end = CMTime(seconds: trimEnd, preferredTimescale: 600)
             let range = CMTimeRangeFromTimeToTime(start: start, end: end)
@@ -1493,15 +1510,22 @@ private struct ClipTrimView: View {
             errorMessage = error.localizedDescription
         }
 
-        isExporting = false
     }
 
     private func exportGIF() async {
         isExportingGIF = true
         errorMessage = nil
+        defer { isExportingGIF = false }
 
         do {
-            let outputURL = GIFExporter.uniqueOutputURL(basedOn: url)
+            let suggestedURL = GIFExporter.uniqueOutputURL(basedOn: url)
+            guard let outputURL = ExportDestinationPicker.chooseDestination(
+                suggestedURL: suggestedURL,
+                contentType: .gif,
+                title: "Export GIF"
+            ) else {
+                return
+            }
             try await GIFExporter.export(
                 sourceURL: url,
                 startSeconds: trimStart,
@@ -1518,7 +1542,6 @@ private struct ClipTrimView: View {
             errorMessage = error.localizedDescription
         }
 
-        isExportingGIF = false
     }
 
     private func seek(to seconds: Double) {

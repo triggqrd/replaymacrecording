@@ -18,6 +18,8 @@ public enum AppTheme {
 }
 
 public struct AccentButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
@@ -32,10 +34,11 @@ public struct AccentButtonStyle: ButtonStyle {
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-                .opacity(configuration.isPressed ? 0.8 : 1.0)
+                .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1.0) : 0.28)
             )
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall, style: .continuous))
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .scaleEffect(configuration.isPressed && isEnabled ? 0.97 : 1.0)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.15), value: isEnabled)
     }
 }

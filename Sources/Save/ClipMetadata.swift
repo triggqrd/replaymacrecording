@@ -27,12 +27,13 @@ public struct ClipInfo: Identifiable, Sendable {
 }
 
 public enum ClipMetadata {
+    /// Built from ``UserHome`` rather than the `.moviesDirectory` search path:
+    /// under the sandbox the latter names the app container, which must never
+    /// appear in stored or displayed locations. Writing to the real `~/Movies`
+    /// is covered by the `com.apple.security.assets.movies.read-write`
+    /// entitlement.
     public static var defaultOutputDirectory: URL {
-        FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask)
-            .first?
-            .appendingPathComponent("ReplayMac", isDirectory: true)
-            ?? URL(fileURLWithPath: NSHomeDirectory())
-                .appendingPathComponent("Movies/ReplayMac", isDirectory: true)
+        UserHome.moviesDirectory.appendingPathComponent("ReplayMac", isDirectory: true)
     }
 
     /// Default base name when no template is supplied, e.g.

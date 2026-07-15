@@ -19,7 +19,7 @@
     <key>CFBundleShortVersionString</key>
     <string>1.6.7</string>
     <key>CFBundleVersion</key>
-    <string>1.6.7</string>
+    <string>1.6.8</string>
     <key>LSMinimumSystemVersion</key>
     <string>15.0</string>
     <key>LSApplicationCategoryType</key>
@@ -28,6 +28,8 @@
     <string>© 2026 Alex (picccassso)</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Screen recording access is required to keep a rolling replay buffer and save clips when you ask.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>ReplayMac needs microphone access to include your voice in captured clips.</string>
     <key>NSAudioCaptureUsageDescription</key>

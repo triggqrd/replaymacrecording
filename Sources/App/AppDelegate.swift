@@ -14,19 +14,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     let captureManager = CaptureManager()
     let frameCompositor = FrameCompositor()
     let videoEncoder = VideoEncoder()
-    let videoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
+    lazy var videoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
     let dualDisplay1VideoEncoder = VideoEncoder()
     let dualDisplay2VideoEncoder = VideoEncoder()
-    let dualDisplay1VideoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
-    let dualDisplay2VideoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
+    lazy var dualDisplay1VideoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
+    lazy var dualDisplay2VideoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
 
     let systemAudioCapture = SystemAudioCapture()
     let perAppAudioCapture = PerAppAudioCapture()
     let micAudioCapture = MicCapture()
     let systemAudioEncoder = AudioEncoder()
     let micAudioEncoder = AudioEncoder()
-    let systemAudioRingBuffer = AudioRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
-    let micAudioRingBuffer = AudioRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
+    lazy var systemAudioRingBuffer = AudioRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
+    lazy var micAudioRingBuffer = AudioRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
 
     lazy var clipSaver = ClipSaver(
         videoRingBuffer: videoRingBuffer,
@@ -51,6 +51,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     var captureRecoveryTask: Task<Void, Never>?
     var monitoringTask: Task<Void, Never>?
     var clipLibraryWindowController: NSWindowController?
+    var onboardingWindowController: NSWindowController?
     var bufferDurationObservation: Defaults.Observation?
     var settingsObservations: [Defaults.Observation] = []
     var settingsReconcileTask: Task<Void, Never>?
@@ -77,9 +78,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     var originalDualPointPixelScale2: Double = 1.0
     var originalDualPixelWidth2: Int = 0
     var originalDualPixelHeight2: Int = 0
-    var lastMicEnabled = AppSettings.captureMicrophone
-    var lastMicDeviceID = AppSettings.microphoneID
+    var lastMicEnabled = false
+    var lastMicDeviceID = ""
     var hasNotifiedMicDenied = false
+
+    override init() {
+        // Capture legacy-install state before any AppSettings access can seed
+        // the preferences domain and make a clean install look established.
+        OnboardingState.migrateExistingInstallationIfNeeded()
+        super.init()
+        lastMicEnabled = AppSettings.captureMicrophone
+        lastMicDeviceID = AppSettings.microphoneID
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Must run before anything touches the output directory: under the
@@ -121,7 +131,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         setupWindowObservers()
         setupPowerObservers()
 
-        if AppSettings.autoStartRecordingOnLaunch {
+        // First launch: walk through the setup assistant before anything
+        // records. Auto-start (and its screen-recording permission prompt)
+        // waits until the user finishes onboarding.
+        if !Defaults[.hasCompletedOnboarding] {
+            showOnboardingWindow()
+        } else if AppSettings.autoStartRecordingOnLaunch {
             startCapturePipeline(userInitiated: false)
         }
 

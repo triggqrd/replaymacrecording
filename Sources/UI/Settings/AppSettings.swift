@@ -119,13 +119,7 @@ public enum LongBufferDuration: Int, CaseIterable, Identifiable {
 
 private enum AppDefaultValues {
     static var outputDirectoryPath: String {
-        let moviesDirectory = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
-        return moviesDirectory?
-            .appendingPathComponent("ReplayMac", isDirectory: true)
-            .path(percentEncoded: false)
-            ?? URL(filePath: NSHomeDirectory(), directoryHint: .isDirectory)
-                .appending(path: "Movies/ReplayMac", directoryHint: .isDirectory)
-                .path(percentEncoded: false)
+        ClipMetadata.defaultOutputDirectory.path(percentEncoded: false)
     }
 }
 
@@ -314,4 +308,6 @@ public extension Defaults.Keys {
 
     static let systemAudioVolume = Key<Double>("systemAudioVolume", default: 1.0)
     static let microphoneVolume = Key<Double>("microphoneVolume", default: 1.0)
+
+    static let hasCompletedOnboarding = Key<Bool>("hasCompletedOnboarding", default: false)
 }

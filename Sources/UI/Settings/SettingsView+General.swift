@@ -23,10 +23,11 @@ extension SettingsView {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("Output directory")
                     Spacer()
-                    Text(outputDirectoryPath)
+                    Text(UserHome.abbreviateForDisplay(outputDirectoryPath))
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .foregroundStyle(AppTheme.textSecondary)
+                        .help(outputDirectoryPath)
                 }
 
                 Button("Choose Folder…") {
@@ -101,24 +102,9 @@ extension SettingsView {
     }
 
     func chooseOutputDirectory() {
-        let panel = NSOpenPanel()
-        panel.title = "Choose Clip Output Folder"
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.canCreateDirectories = true
-        panel.directoryURL = URL(filePath: outputDirectoryPath, directoryHint: .isDirectory)
-
-        guard panel.runModal() == .OK, let selectedURL = panel.url else {
-            return
+        if let path = OutputDirectoryAccess.promptUserToChoose() {
+            outputDirectoryPath = path
         }
-
-        let path = selectedURL.standardizedFileURL.path(percentEncoded: false)
-        outputDirectoryPath = path
-        Defaults[.outputDirectoryPath] = path
-        UserDefaults.standard.set(path, forKey: "outputDirectoryPath")
-        UserDefaults.standard.synchronize()
-        OutputDirectoryAccess.adopt(selectedURL)
     }
 
     func syncLaunchAtLoginState() {

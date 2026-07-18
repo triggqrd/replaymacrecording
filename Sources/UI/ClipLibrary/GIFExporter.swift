@@ -92,6 +92,7 @@ enum GIFExporter {
         frameRate: Double = 12,
         maxWidth: CGFloat = 720,
         maxFrames: Int = 300,
+        crop: NormalizedVideoCrop? = nil,
         to outputURL: URL
     ) async throws {
         let rangeDuration = endSeconds - startSeconds
@@ -112,9 +113,16 @@ enum GIFExporter {
         generator.appliesPreferredTrackTransform = true
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
-        generator.maximumSize = CGSize(width: maxWidth, height: maxWidth * 4)
+        // Generate enough source pixels that a narrow crop can still reach the
+        // requested output width. AVAssetImageGenerator caps this at the
+        // source's native resolution, so this does not upscale the video.
+        let sourceWidth = crop.map { maxWidth / max($0.rect.width, 0.05) } ?? maxWidth
+        generator.maximumSize = CGSize(width: sourceWidth, height: sourceWidth * 4)
 
-        let frames = await generateFrames(generator: generator, times: sampleTimes)
+        var frames = await generateFrames(generator: generator, times: sampleTimes)
+        if let crop, !crop.isFullFrame {
+            frames = frames.compactMap { croppedAndScaled($0, crop: crop, maxWidth: maxWidth) }
+        }
         guard !frames.isEmpty else {
             throw GIFExportError.noFrames
         }
@@ -181,5 +189,38 @@ enum GIFExporter {
                 }
             }
         }
+    }
+
+    static func croppedAndScaled(
+        _ image: CGImage,
+        crop: NormalizedVideoCrop,
+        maxWidth: CGFloat
+    ) -> CGImage? {
+        let imageSize = CGSize(width: image.width, height: image.height)
+        let cropRect = VideoCropper.pixelRect(for: crop, displaySize: imageSize)
+            .intersection(CGRect(origin: .zero, size: imageSize))
+        guard !cropRect.isNull, cropRect.width > 0, cropRect.height > 0,
+              let cropped = image.cropping(to: cropRect) else {
+            return nil
+        }
+
+        guard CGFloat(cropped.width) > maxWidth else { return cropped }
+        let scale = maxWidth / CGFloat(cropped.width)
+        let outputWidth = max(1, Int(maxWidth.rounded(.down)))
+        let outputHeight = max(1, Int((CGFloat(cropped.height) * scale).rounded(.down)))
+        guard let context = CGContext(
+            data: nil,
+            width: outputWidth,
+            height: outputHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        context.interpolationQuality = .high
+        context.draw(cropped, in: CGRect(x: 0, y: 0, width: outputWidth, height: outputHeight))
+        return context.makeImage()
     }
 }

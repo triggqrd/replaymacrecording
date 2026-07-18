@@ -342,7 +342,7 @@ public struct ClipLibraryView: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .help("Trim the clip, choose an audio track, and export as MP4 or GIF")
+                .help("Trim or crop the clip, choose an audio track, and export as MP4 or GIF")
 
                 ShareLink(item: row.info.fileURL) {
                     Label("Share", systemImage: "square.and.arrow.up")
@@ -1299,13 +1299,31 @@ private struct ClipTrimView: View {
     @State private var errorMessage: String?
     @State private var audioTrackChoices: [AudioTrackChoice] = []
     @State private var selectedAudioTrackID = AudioTrackChoice.allTracksID
+    @State private var cropEnabled = false
+    @State private var cropRect = NormalizedVideoCrop.fullFrame.rect
+    @State private var cropAspect: CropAspectPreset = .free
+    @State private var videoDisplaySize = CGSize(width: 16, height: 9)
 
     private var isBusy: Bool { isExporting || isExportingGIF }
+    private var activeCrop: NormalizedVideoCrop? {
+        guard cropEnabled else { return nil }
+        let crop = NormalizedVideoCrop(cropRect)
+        return crop.isFullFrame ? nil : crop
+    }
 
     var body: some View {
         VStack(spacing: 14) {
             if let player {
-                AVPlayerViewRepresentable(player: player)
+                ZStack {
+                    AVPlayerViewRepresentable(player: player)
+                    if cropEnabled {
+                        VideoCropSelectionView(
+                            selection: $cropRect,
+                            videoSize: videoDisplaySize,
+                            onManualChange: { cropAspect = .free }
+                        )
+                    }
+                }
                     .frame(minWidth: 720, minHeight: 405)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium, style: .continuous))
                     .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
@@ -1346,6 +1364,8 @@ private struct ClipTrimView: View {
                 }
             }
             .font(.system(size: 12, weight: .medium, design: .rounded))
+
+            cropControls
 
             if !audioTrackChoices.isEmpty {
                 AudioTrackPickerView(
@@ -1412,7 +1432,10 @@ private struct ClipTrimView: View {
                         ProgressView()
                             .controlSize(.small)
                     } else {
-                        Label("Export Trim", systemImage: "square.and.arrow.down")
+                        Label(
+                            activeCrop == nil ? "Export Trim" : "Export Trim & Crop",
+                            systemImage: "square.and.arrow.down"
+                        )
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -1427,6 +1450,10 @@ private struct ClipTrimView: View {
         .onChange(of: selectedAudioTrackID) { _, newValue in
             ClipAudioTracks.apply(selection: newValue, choices: audioTrackChoices, to: player?.currentItem)
         }
+        .onChange(of: cropAspect) { _, newValue in
+            guard newValue != .free else { return }
+            cropRect = newValue.cropRect(for: videoDisplaySize)
+        }
         .onDisappear {
             player?.pause()
             player = nil
@@ -1438,12 +1465,15 @@ private struct ClipTrimView: View {
         let loadedDuration = (try? await asset.load(.duration)) ?? .zero
         let seconds = max(CMTimeGetSeconds(loadedDuration), 0)
         let choices = await ClipAudioTracks.choices(for: asset)
+        let displaySize = (try? await VideoCropper.geometry(for: asset).displaySize)
+            ?? CGSize(width: 16, height: 9)
 
         await MainActor.run {
             duration = seconds
             trimStart = 0
             trimEnd = seconds
             audioTrackChoices = choices
+            videoDisplaySize = displaySize
             let newPlayer = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             ClipAudioTracks.apply(selection: selectedAudioTrackID, choices: choices, to: newPlayer.currentItem)
             player = newPlayer
@@ -1458,6 +1488,7 @@ private struct ClipTrimView: View {
 
         do {
             let asset = AVURLAsset(url: url)
+            let crop = activeCrop
 
             // A solo track selection carries over to the export: the other
             // audio tracks are dropped from the output file.
@@ -1469,7 +1500,14 @@ private struct ClipTrimView: View {
                 exportAsset = asset
             }
 
-            let suffix = soloChoice.map { "Trimmed_\($0.label.filter { !$0.isWhitespace })" } ?? "Trimmed"
+            var suffixParts = ["Trimmed"]
+            if crop != nil {
+                suffixParts.append("Cropped")
+            }
+            if let soloChoice {
+                suffixParts.append(soloChoice.label.filter { !$0.isWhitespace })
+            }
+            let suffix = suffixParts.joined(separator: "_")
             let suggestedURL = try ClipMetadata.generateUniqueFileURL(
                 in: url.deletingLastPathComponent(),
                 suffix: suffix
@@ -1486,7 +1524,9 @@ private struct ClipTrimView: View {
             let range = CMTimeRangeFromTimeToTime(start: start, end: end)
 
             let preset: String
-            if await AVAssetExportSession.compatibility(
+            if crop != nil {
+                preset = AVAssetExportPresetHighestQuality
+            } else if await AVAssetExportSession.compatibility(
                 ofExportPreset: AVAssetExportPresetPassthrough,
                 with: exportAsset,
                 outputFileType: .mp4
@@ -1501,6 +1541,12 @@ private struct ClipTrimView: View {
             }
 
             exportSession.timeRange = range
+            if let crop {
+                exportSession.videoComposition = try await VideoCropper.videoComposition(
+                    for: exportAsset,
+                    crop: crop
+                )
+            }
             exportSession.shouldOptimizeForNetworkUse = true
             try await exportSession.export(to: outputURL, as: .mp4)
 
@@ -1518,6 +1564,7 @@ private struct ClipTrimView: View {
         defer { isExportingGIF = false }
 
         do {
+            let crop = activeCrop
             let suggestedURL = GIFExporter.uniqueOutputURL(basedOn: url)
             guard let outputURL = ExportDestinationPicker.chooseDestination(
                 suggestedURL: suggestedURL,
@@ -1531,6 +1578,7 @@ private struct ClipTrimView: View {
                 startSeconds: trimStart,
                 endSeconds: trimEnd,
                 maxWidth: gifWidth.points,
+                crop: crop,
                 to: outputURL
             )
 
@@ -1547,6 +1595,44 @@ private struct ClipTrimView: View {
     private func seek(to seconds: Double) {
         let time = CMTime(seconds: seconds, preferredTimescale: 600)
         player?.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    private var cropControls: some View {
+        HStack(spacing: 8) {
+            Toggle(isOn: $cropEnabled) {
+                Label("Crop", systemImage: "crop")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+            }
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .disabled(isBusy)
+            .help("Crop both MP4 and GIF exports to the selected area")
+
+            if cropEnabled {
+                Picker("Crop aspect ratio", selection: $cropAspect) {
+                    ForEach(CropAspectPreset.allCases) { preset in
+                        Text(preset.title).tag(preset)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(maxWidth: 310)
+                .disabled(isBusy)
+
+                Button("Reset") {
+                    cropAspect = .free
+                    cropRect = NormalizedVideoCrop.fullFrame.rect
+                }
+                .controlSize(.small)
+                .disabled(isBusy)
+
+                Text("\(Int((cropRect.width * 100).rounded()))% × \(Int((cropRect.height * 100).rounded()))%")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(AppTheme.textSecondary)
+            }
+
+            Spacer()
+        }
     }
 
     private func timeLabel(_ seconds: Double) -> String {

@@ -41,7 +41,9 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 
 Grab the latest release from the [Releases](https://github.com/picccassso/ReplayMac/releases) page. Updates are manual — download new releases from GitHub when you want to upgrade.
 
-> **Note:** ReplayMac is not notarized. On first launch, right-click the app and choose **Open** to bypass Gatekeeper.
+ReplayMac is now notarized by Apple, so it opens like any other app — no Gatekeeper workarounds needed.
+
+> **Coming soon:** a Mac App Store version of ReplayMac. Buying it is a great way to help fund development.
 
 ## Build from source
 

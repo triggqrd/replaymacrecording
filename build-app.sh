@@ -86,7 +86,15 @@ for bundle in "$BIN_DIR"/*.bundle; do
   fi
 done
 
-codesign --force --deep --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_DIR"
+# Hardened runtime + secure timestamp are required for notarization.
+# Ad-hoc signatures support neither, so only add them for real identities.
+HARDENING_FLAGS=""
+if [ "$SIGN_IDENTITY" != "-" ]; then
+  HARDENING_FLAGS="--options runtime --timestamp"
+fi
+
+# shellcheck disable=SC2086  # HARDENING_FLAGS intentionally word-splits
+codesign --force --deep $HARDENING_FLAGS --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_DIR"
 codesign --verify --deep --strict "$APP_DIR"
 
 printf "Built app: %s\n" "$APP_DIR"

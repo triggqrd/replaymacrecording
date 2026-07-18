@@ -8,11 +8,10 @@ public extension Defaults.Keys {
 
 /// Keeps sandbox access to a user-chosen output directory across launches.
 ///
-/// The default `~/Movies/ReplayMac` location is covered by the
-/// `com.apple.security.assets.movies.read-write` entitlement and needs no
-/// bookmark; only custom folders picked in Settings go through here. The
-/// scoped access is held open for the app's lifetime because clips can be
-/// saved at any moment while recording.
+/// App Store builds require every output folder, including the suggested
+/// `~/Movies/ReplayMac` location, to be selected through the standard folder
+/// picker. The scoped access is held open for the app's lifetime because clips
+/// can be saved at any moment while recording.
 @MainActor
 public enum OutputDirectoryAccess {
     private static var scopedURL: URL?
@@ -72,11 +71,13 @@ public enum OutputDirectoryAccess {
     }
 
     /// Re-establish access to a previously chosen folder. Call once at launch,
-    /// before anything touches the output directory.
-    public static func restore() {
+    /// before anything touches the output directory. Returns `true` only when
+    /// persistent access was successfully restored.
+    @discardableResult
+    public static func restore() -> Bool {
         migrateLegacyContainerDefault()
 
-        guard let data = Defaults[.outputDirectoryBookmark] else { return }
+        guard let data = Defaults[.outputDirectoryBookmark] else { return false }
 
         var isStale = false
         let url: URL
@@ -93,12 +94,16 @@ public enum OutputDirectoryAccess {
             NSLog("OutputDirectoryAccess: dropping unresolvable bookmark: \(error)")
             Defaults[.outputDirectoryBookmark] = nil
             Defaults.reset(.outputDirectoryPath)
-            return
+            return false
         }
 
-        if url.startAccessingSecurityScopedResource() {
-            scopedURL = url
+        guard url.startAccessingSecurityScopedResource() else {
+            NSLog("OutputDirectoryAccess: security-scoped access could not be restored for \(url.path)")
+            Defaults[.outputDirectoryBookmark] = nil
+            Defaults.reset(.outputDirectoryPath)
+            return false
         }
+        scopedURL = url
 
         if isStale, let fresh = try? url.bookmarkData(
             options: .withSecurityScope,
@@ -113,6 +118,7 @@ public enum OutputDirectoryAccess {
         if Defaults[.outputDirectoryPath] != resolvedPath {
             Defaults[.outputDirectoryPath] = resolvedPath
         }
+        return true
     }
 
     /// Builds before 1.6.8 registered the sandbox-container Movies path

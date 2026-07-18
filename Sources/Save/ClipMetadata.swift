@@ -29,9 +29,9 @@ public struct ClipInfo: Identifiable, Sendable {
 public enum ClipMetadata {
     /// Built from ``UserHome`` rather than the `.moviesDirectory` search path:
     /// under the sandbox the latter names the app container, which must never
-    /// appear in stored or displayed locations. Writing to the real `~/Movies`
-    /// is covered by the `com.apple.security.assets.movies.read-write`
-    /// entitlement.
+    /// appear in stored or displayed locations. App Store builds use this as
+    /// the suggested location and gain access only after the user selects it
+    /// with the standard folder picker.
     public static var defaultOutputDirectory: URL {
         UserHome.moviesDirectory.appendingPathComponent("ReplayMac", isDirectory: true)
     }

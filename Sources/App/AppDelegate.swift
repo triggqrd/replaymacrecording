@@ -95,7 +95,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         // Must run before anything touches the output directory: under the
         // sandbox, access to a custom output folder only exists while the
         // security-scoped bookmark is being accessed.
+#if APPSTORE
+        let restoredOutputDirectoryAccess = OutputDirectoryAccess.restore()
+        // App Store builds intentionally have no blanket Movies-folder
+        // entitlement. Existing installs from an older build may therefore
+        // need to choose their output folder once to create a bookmark.
+        if !restoredOutputDirectoryAccess {
+            Defaults[.hasCompletedOnboarding] = false
+        }
+#else
         OutputDirectoryAccess.restore()
+#endif
 
         NotificationManager.shared.requestAuthorization()
 

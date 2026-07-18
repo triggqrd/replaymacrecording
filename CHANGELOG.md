@@ -2,6 +2,8 @@
 
 ## 1.6.7
 
+- Add crop support to clip trim and GIF export: a crop toggle in the trim sheet with a draggable selection overlay (resize handles, centre move control, and free/16:9/1:1/4:3/9:16 aspect presets); MP4 exports apply the crop through a video composition with output dimensions snapped to even values for the encoder, and GIF exports crop and rescale each frame with oversampling so narrow crops stay sharp
+- Add a first-run welcome flow that guides new users through output-folder selection, capture preferences, hotkeys, and startup options, persisting access to user-selected folders and using standard save dialogs for exports
 - First Mac App Store release: sandboxed build with security-scoped bookmarks for custom output folders; the App Store variant relies on the App Store for updates and makes no network connections
 - Add audio track selection to clip preview and trim export: when audio tracks are kept separate, Quick Preview and Trim offer an All Tracks / System Audio / Microphone picker, and Trim & Export drops unselected tracks from the output (passthrough, no re-encode) with the track name in the filename
 - Add a manual hotkey setup guide (docs/manual-hotkey-setup.md) for macOS versions where a system bug breaks the Settings shortcut recorder, with `defaults write` instructions for all six actions

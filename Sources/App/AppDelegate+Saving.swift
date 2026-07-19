@@ -208,7 +208,7 @@ extension AppDelegate {
         guard let app = NSWorkspace.shared.frontmostApplication else {
             return nil
         }
-        // Don't name clips after ReplayMac itself when it happens to be frontmost.
+        // Don't name clips after ReplayCap itself when it happens to be frontmost.
         if app.bundleIdentifier == Bundle.main.bundleIdentifier {
             return nil
         }

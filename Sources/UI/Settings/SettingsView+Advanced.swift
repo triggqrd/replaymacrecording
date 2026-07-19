@@ -1,3 +1,4 @@
+import Branding
 import SwiftUI
 import Defaults
 
@@ -25,7 +26,7 @@ extension SettingsView {
                     Text("SCK queue depth: \(queueDepth)")
                 }
 
-                Label("Number of frames ScreenCaptureKit can queue before ReplayMac processes them. Higher values may smooth capture but use more memory and add latency.", systemImage: "info.circle")
+                Label("Number of frames ScreenCaptureKit can queue before \(AppBranding.name) processes them. Higher values may smooth capture but use more memory and add latency.", systemImage: "info.circle")
                     .foregroundStyle(AppTheme.textSecondary)
                     .font(.system(size: 12, design: .rounded))
             } header: {

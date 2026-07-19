@@ -133,7 +133,7 @@ final class LongBufferRecorderTests: XCTestCase {
         await recorder.stop()
 
         let segmentDirectory = outputDirectory
-            .appendingPathComponent(".ReplayMacLongBuffer", isDirectory: true)
+            .appendingPathComponent(".ReplayCapLongBuffer", isDirectory: true)
         let filesAfterFailure = try FileManager.default.contentsOfDirectory(
             at: segmentDirectory,
             includingPropertiesForKeys: nil
@@ -228,7 +228,7 @@ final class LongBufferRecorderTests: XCTestCase {
         XCTAssertTrue(stagedURLs.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
         XCTAssertFalse(
             FileManager.default.fileExists(
-                atPath: outputDirectory.appendingPathComponent(".ReplayMacLongBufferExports").path
+                atPath: outputDirectory.appendingPathComponent(".ReplayCapLongBufferExports").path
             )
         )
     }
@@ -285,7 +285,7 @@ final class LongBufferRecorderTests: XCTestCase {
         XCTAssertTrue(stagedURLs.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
         XCTAssertFalse(
             FileManager.default.fileExists(
-                atPath: outputDirectory.appendingPathComponent(".ReplayMacLongBufferExports").path
+                atPath: outputDirectory.appendingPathComponent(".ReplayCapLongBufferExports").path
             )
         )
         XCTAssertEqual(
@@ -355,12 +355,12 @@ final class LongBufferRecorderTests: XCTestCase {
         )
         XCTAssertFalse(
             FileManager.default.fileExists(
-                atPath: outputDirectory.appendingPathComponent(".ReplayMacLongBufferExports").path
+                atPath: outputDirectory.appendingPathComponent(".ReplayCapLongBufferExports").path
             )
         )
     }
 
-    func testConfigureRemovesOnlyOrphanedReplayMacSegments() async throws {
+    func testConfigureRemovesOnlyOrphanedLegacyReplayMacSegments() async throws {
         let outputDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let segmentDirectory = outputDirectory
@@ -411,7 +411,7 @@ final class LongBufferRecorderTests: XCTestCase {
 
     private func segmentFiles(in outputDirectory: URL) throws -> [URL] {
         let segmentDirectory = outputDirectory
-            .appendingPathComponent(".ReplayMacLongBuffer", isDirectory: true)
+            .appendingPathComponent(".ReplayCapLongBuffer", isDirectory: true)
         guard FileManager.default.fileExists(atPath: segmentDirectory.path) else {
             return []
         }

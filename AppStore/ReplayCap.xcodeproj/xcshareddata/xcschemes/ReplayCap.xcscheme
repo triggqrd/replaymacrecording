@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "917117649B3C8F71794D61FC"
-               BuildableName = "ReplayMac.app"
-               BlueprintName = "ReplayMac"
-               ReferencedContainer = "container:ReplayMac.xcodeproj">
+               BlueprintIdentifier = "9F855BEB2C41F66140F1C3E6"
+               BuildableName = "ReplayCap.app"
+               BlueprintName = "ReplayCap"
+               ReferencedContainer = "container:ReplayCap.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "917117649B3C8F71794D61FC"
-            BuildableName = "ReplayMac.app"
-            BlueprintName = "ReplayMac"
-            ReferencedContainer = "container:ReplayMac.xcodeproj">
+            BlueprintIdentifier = "9F855BEB2C41F66140F1C3E6"
+            BuildableName = "ReplayCap.app"
+            BlueprintName = "ReplayCap"
+            ReferencedContainer = "container:ReplayCap.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -57,10 +57,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "917117649B3C8F71794D61FC"
-            BuildableName = "ReplayMac.app"
-            BlueprintName = "ReplayMac"
-            ReferencedContainer = "container:ReplayMac.xcodeproj">
+            BlueprintIdentifier = "9F855BEB2C41F66140F1C3E6"
+            BuildableName = "ReplayCap.app"
+            BlueprintName = "ReplayCap"
+            ReferencedContainer = "container:ReplayCap.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -76,10 +76,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "917117649B3C8F71794D61FC"
-            BuildableName = "ReplayMac.app"
-            BlueprintName = "ReplayMac"
-            ReferencedContainer = "container:ReplayMac.xcodeproj">
+            BlueprintIdentifier = "9F855BEB2C41F66140F1C3E6"
+            BuildableName = "ReplayCap.app"
+            BlueprintName = "ReplayCap"
+            ReferencedContainer = "container:ReplayCap.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>

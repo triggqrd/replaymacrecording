@@ -2,16 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "ReplayMac",
+    name: "ReplayCap",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "ReplayMac", targets: ["ReplayMac"]),
+        .executable(name: "ReplayCap", targets: ["ReplayCap"]),
         // Library product consumed by the Xcode wrapper project
-        // (AppStore/ReplayMac.xcodeproj), whose app target compiles
+        // (AppStore/ReplayCap.xcodeproj), whose app target compiles
         // Sources/App itself and links these modules.
         .library(
-            name: "ReplayMacKit",
-            targets: ["Capture", "Encode", "RingBuffer", "Save", "Audio", "UI", "Hotkeys", "Feedback"]
+            name: "ReplayCapKit",
+            targets: ["Branding", "Capture", "Encode", "RingBuffer", "Save", "Audio", "UI", "Hotkeys", "Feedback"]
         )
     ],
     dependencies: [
@@ -21,16 +21,21 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "ReplayMac",
+            name: "ReplayCap",
             dependencies: [
-                "Capture", "Encode", "RingBuffer", "Save", "Audio", "UI", "Hotkeys", "Feedback",
+                "Branding", "Capture", "Encode", "RingBuffer", "Save", "Audio", "UI", "Hotkeys", "Feedback",
                 .product(name: "Defaults", package: "Defaults")
             ],
             path: "Sources/App",
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .target(
+            name: "Branding",
+            path: "Sources/Branding"
+        ),
+        .target(
             name: "Capture",
+            dependencies: ["Branding"],
             path: "Sources/Capture",
             linkerSettings: [
                 .linkedFramework("ScreenCaptureKit"),
@@ -57,7 +62,7 @@ let package = Package(
         ),
         .target(
             name: "Save",
-            dependencies: ["RingBuffer"],
+            dependencies: ["Branding", "RingBuffer"],
             path: "Sources/Save",
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
@@ -77,6 +82,7 @@ let package = Package(
         .target(
             name: "UI",
             dependencies: [
+                "Branding",
                 "Audio",
                 "Save",
                 "Hotkeys",
@@ -92,6 +98,7 @@ let package = Package(
         ),
         .target(
             name: "Feedback",
+            dependencies: ["Branding"],
             path: "Sources/Feedback",
             linkerSettings: [
                 .linkedFramework("AudioToolbox"),

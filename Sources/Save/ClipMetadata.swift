@@ -1,3 +1,4 @@
+import Branding
 import Foundation
 import AVFoundation
 
@@ -33,17 +34,17 @@ public enum ClipMetadata {
     /// the suggested location and gain access only after the user selects it
     /// with the standard folder picker.
     public static var defaultOutputDirectory: URL {
-        UserHome.moviesDirectory.appendingPathComponent("ReplayMac", isDirectory: true)
+        UserHome.moviesDirectory.appendingPathComponent(AppBranding.name, isDirectory: true)
     }
 
     /// Default base name when no template is supplied, e.g.
-    /// `ReplayMac_2026-06-22_11-00-21`.
+    /// `ReplayMac_2026-06-22_11-00-21` (`ReplayCap_` on the App Store).
     public static func defaultBaseName(date: Date = Date()) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone.current
-        return "ReplayMac_\(formatter.string(from: date))"
+        return "\(AppBranding.name)_\(formatter.string(from: date))"
     }
 
     /// - Parameter baseName: The resolved file name without extension or
@@ -81,7 +82,7 @@ public enum ClipMetadata {
         let sourceItem = AVMutableMetadataItem()
         sourceItem.key = AVMetadataKey.commonKeySource as (NSCopying & NSObjectProtocol)?
         sourceItem.keySpace = .common
-        sourceItem.value = "ReplayMac" as (NSCopying & NSObjectProtocol)?
+        sourceItem.value = AppBranding.name as (NSCopying & NSObjectProtocol)?
 
         let dateFormatter = ISO8601DateFormatter()
         let dateString = dateFormatter.string(from: Date())

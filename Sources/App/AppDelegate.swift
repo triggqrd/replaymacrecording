@@ -1,4 +1,5 @@
 import Cocoa
+import Branding
 import Capture
 import Encode
 import RingBuffer
@@ -83,10 +84,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     var hasNotifiedMicDenied = false
 
     override init() {
+        // Branding must be set before anything builds user-facing strings or
+        // compares against branded defaults (migrateLegacyBrandDefaults). The
+        // APPSTORE condition reaches these sources in both build pipelines
+        // (build-app.sh --appstore and the Xcode wrapper) but not the package
+        // modules — they read AppBranding at runtime.
+        #if APPSTORE
+        AppBranding.name = "ReplayCap"
+        #else
+        AppBranding.name = "ReplayMac"
+        #endif
         // Capture legacy-install state before any AppSettings access can seed
         // the preferences domain and make a clean install look established.
         OnboardingState.migrateExistingInstallationIfNeeded()
         super.init()
+        AppSettings.migrateLegacyBrandDefaults()
         lastMicEnabled = AppSettings.captureMicrophone
         lastMicDeviceID = AppSettings.microphoneID
     }

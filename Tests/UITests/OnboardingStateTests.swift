@@ -47,7 +47,7 @@ final class OnboardingStateTests: XCTestCase {
         )
     }
 
-    func testReplayMacPreferenceIdentifiesExistingInstall() {
+    func testStoredAppPreferenceIdentifiesExistingInstall() {
         XCTAssertTrue(
             OnboardingState.containsLegacyPreference(
                 in: ["NSWindow Frame Settings", "bufferDurationSeconds"]
@@ -56,7 +56,7 @@ final class OnboardingStateTests: XCTestCase {
     }
 
     @MainActor
-    func testMigrationMarksStoredReplayMacPreferencesComplete() throws {
+    func testMigrationMarksStoredAppPreferencesComplete() throws {
         let (defaults, suiteName) = try makeDefaults()
         defaults.set(45, forKey: "bufferDurationSeconds")
 

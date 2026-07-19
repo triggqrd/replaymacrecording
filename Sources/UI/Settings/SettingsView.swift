@@ -3,7 +3,7 @@ import AppKit
 import Defaults
 
 public extension Notification.Name {
-    static let replayMacSettingsShouldOpenGeneral = Notification.Name("replayMacSettingsShouldOpenGeneral")
+    static let replayCapSettingsShouldOpenGeneral = Notification.Name("replayCapSettingsShouldOpenGeneral")
 }
 
 public struct SettingsView: View {
@@ -93,7 +93,7 @@ public struct SettingsView: View {
         .onAppear {
             selectedTab = .general
         }
-        .onReceive(NotificationCenter.default.publisher(for: .replayMacSettingsShouldOpenGeneral)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .replayCapSettingsShouldOpenGeneral)) { _ in
             selectedTab = .general
         }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in

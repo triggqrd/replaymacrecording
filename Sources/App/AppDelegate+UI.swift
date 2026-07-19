@@ -1,3 +1,4 @@
+import Branding
 import Cocoa
 import SwiftUI
 import UI
@@ -168,7 +169,7 @@ extension AppDelegate {
                 self?.completeOnboarding()
             })
             let window = NSWindow(contentViewController: hostingController)
-            window.title = "Welcome to ReplayMac"
+            window.title = "Welcome to \(AppBranding.name)"
             // Setup establishes the user-selected output location required by
             // the sandbox, so it cannot be dismissed before completion.
             window.styleMask = [.titled, .fullSizeContentView]
@@ -223,11 +224,11 @@ extension AppDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        NotificationCenter.default.post(name: .replayMacSettingsShouldOpenGeneral, object: nil)
+        NotificationCenter.default.post(name: .replayCapSettingsShouldOpenGeneral, object: nil)
 
         bringSettingsWindowToFront()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            NotificationCenter.default.post(name: .replayMacSettingsShouldOpenGeneral, object: nil)
+            NotificationCenter.default.post(name: .replayCapSettingsShouldOpenGeneral, object: nil)
             self?.bringSettingsWindowToFront()
         }
     }

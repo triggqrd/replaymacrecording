@@ -13,7 +13,7 @@ public final class LongBufferAppendPump: @unchecked Sendable {
     }
 
     private let recorder: LongBufferRecorder
-    private let queue = DispatchQueue(label: "com.replaymac.long-buffer.append-pump", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.replaycap.long-buffer.append-pump", qos: .userInitiated)
     private let maxPendingSamples: Int
     private var pendingSamples: [PendingSample] = []
     private var isDraining = false

@@ -16,25 +16,35 @@ struct ClipLibraryStorageSummary: Equatable {
 }
 
 enum ClipLibraryMetadataStore {
-    private static let metadataFileName = ".ReplayMacClipLibrary.json"
+    private static let metadataFileName = ".ReplayCapClipLibrary.json"
+    private static let legacyMetadataFileName = ".ReplayMacClipLibrary.json"
 
     static func metadataURL(in directory: URL) -> URL {
         directory.appendingPathComponent(metadataFileName, isDirectory: false)
     }
 
     static func load(in directory: URL) -> [String: ClipUserMetadata] {
-        let url = metadataURL(in: directory)
-        guard let data = try? Data(contentsOf: url) else {
+        let currentURL = metadataURL(in: directory)
+        let legacyURL = directory.appendingPathComponent(legacyMetadataFileName, isDirectory: false)
+        let sourceURL = FileManager.default.fileExists(atPath: currentURL.path)
+            ? currentURL
+            : legacyURL
+
+        guard let data = try? Data(contentsOf: sourceURL),
+              let metadata = try? JSONDecoder().decode([String: ClipUserMetadata].self, from: data) else {
             return [:]
         }
 
-        return (try? JSONDecoder().decode([String: ClipUserMetadata].self, from: data)) ?? [:]
+        if sourceURL == legacyURL {
+            try? data.write(to: currentURL, options: .atomic)
+        }
+        return metadata
     }
 
     static func save(_ metadata: [String: ClipUserMetadata], in directory: URL) {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            let data = try JSONEncoder.prettyReplayMac.encode(metadata)
+            let data = try JSONEncoder.prettyReplayCap.encode(metadata)
             try data.write(to: metadataURL(in: directory), options: .atomic)
         } catch {
             print("Failed to save clip library metadata: \(error)")
@@ -47,7 +57,7 @@ enum ClipLibraryMetadataStore {
 }
 
 private extension JSONEncoder {
-    static var prettyReplayMac: JSONEncoder {
+    static var prettyReplayCap: JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return encoder

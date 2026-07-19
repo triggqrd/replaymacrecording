@@ -2,22 +2,28 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$ROOT_DIR/dist/ReplayMac.app"
-BIN_NAME="ReplayMac"
+BIN_NAME="ReplayCap" # SwiftPM product name, shared by both variants
 INFO_PLIST="$ROOT_DIR/Resources/Info.plist"
-ENTITLEMENTS="$ROOT_DIR/Resources/ReplayMac.dev.entitlements"
-ICON_PATH="$ROOT_DIR/Resources/ReplayMac.icns"
+ENTITLEMENTS="$ROOT_DIR/Resources/ReplayCap.dev.entitlements"
+ICON_PATH="$ROOT_DIR/Resources/ReplayCap.icns"
 
+# Direct/GitHub builds are branded ReplayMac; --appstore builds keep the
+# canonical ReplayCap identity (App Review Guideline 5.2.5 forbids "Mac"
+# in App Store app names).
+#
 # --appstore: Mac App Store variant — compiles out the GitHub update checker
 # (-DAPPSTORE) and signs with the App Store entitlements (no network client).
 # Local testing only; the actual MAS submission still needs Distribution
 # signing and a provisioning profile via Xcode/Transporter.
+APP_NAME="ReplayMac"
 APPSTORE_FLAG=""
 if [ "${1:-}" = "--appstore" ]; then
+  APP_NAME="ReplayCap"
   APPSTORE_FLAG="-Xswiftc -DAPPSTORE"
-  ENTITLEMENTS="$ROOT_DIR/Resources/ReplayMac.appstore.entitlements"
+  ENTITLEMENTS="$ROOT_DIR/Resources/ReplayCap.appstore.entitlements"
   printf 'Building Mac App Store variant (update checker disabled).\n'
 fi
+APP_DIR="$ROOT_DIR/dist/${APP_NAME}.app"
 
 resolve_signing_identity() {
   if [ -n "${SIGNING_IDENTITY:-}" ]; then
@@ -72,11 +78,17 @@ rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
 cp "$INFO_PLIST" "$APP_DIR/Contents/Info.plist"
-cp "$BIN_PATH" "$APP_DIR/Contents/MacOS/$BIN_NAME"
-chmod +x "$APP_DIR/Contents/MacOS/$BIN_NAME"
+# Rebrand the canonical (ReplayCap) plist for the direct build: bundle name,
+# executable, icon file, and user-facing usage descriptions. The bundle
+# identifier (com.replaymac.app) contains no "ReplayCap" and is untouched.
+if [ "$APP_NAME" != "ReplayCap" ]; then
+  sed -i '' "s/ReplayCap/${APP_NAME}/g" "$APP_DIR/Contents/Info.plist"
+fi
+cp "$BIN_PATH" "$APP_DIR/Contents/MacOS/$APP_NAME"
+chmod +x "$APP_DIR/Contents/MacOS/$APP_NAME"
 
 if [ -f "$ICON_PATH" ]; then
-  cp "$ICON_PATH" "$APP_DIR/Contents/Resources/ReplayMac.icns"
+  cp "$ICON_PATH" "$APP_DIR/Contents/Resources/${APP_NAME}.icns"
 fi
 
 # Copy SPM resource bundles into Contents/Resources so they are sealed by codesign

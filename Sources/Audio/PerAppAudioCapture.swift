@@ -17,7 +17,7 @@ public enum PerAppAudioCaptureError: LocalizedError {
 }
 
 public final class PerAppAudioCapture: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "com.replaymac.per-app-audio", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.replaycap.per-app-audio", qos: .userInitiated)
     private let delegate = PerAppAudioCaptureDelegate()
     private var stream: SCStream?
 

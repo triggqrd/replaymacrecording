@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Publish the Mac App Store edition as ReplayCap after App Review rejected "Mac" in the app name (Guideline 5.2.5); the direct/GitHub build keeps the ReplayMac name via a launch-time branding constant shared across both builds
+- Share on-disk metadata and long-buffer names between both editions (`.ReplayCapClipLibrary.json`, `.ReplayCapLongBuffer`), migrating existing `.ReplayMac…` files automatically
+- Notarize the direct-download build: release DMGs are signed with a Developer ID certificate, hardened runtime, and a stapled notarization ticket, so the app opens without Gatekeeper workarounds
+
 ## 1.6.7
 
 - Add crop support to clip trim and GIF export: a crop toggle in the trim sheet with a draggable selection overlay (resize handles, centre move control, and free/16:9/1:1/4:3/9:16 aspect presets); MP4 exports apply the crop through a video composition with output dimensions snapped to even values for the encoder, and GIF exports crop and rescale each frame with oversampling so narrow crops stay sharp

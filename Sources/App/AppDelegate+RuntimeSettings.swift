@@ -1,4 +1,5 @@
 import AVFoundation
+import Branding
 import Capture
 import Defaults
 import Encode
@@ -147,7 +148,7 @@ extension AppDelegate {
             print("Failed to apply runtime settings: \(error)")
             NotificationManager.shared.showOperationalNotification(
                 title: "Capture Settings Failed",
-                body: "ReplayMac could not apply the new capture settings cleanly. Recording is restarting."
+                body: "\(AppBranding.name) could not apply the new capture settings cleanly. Recording is restarting."
             )
             await restartFullPipeline()
         }
@@ -248,11 +249,11 @@ extension AppDelegate {
     func configureDualVideoHandlers(saveMode: DualCaptureSaveMode) async {
         switch saveMode {
         case .sideBySide:
-            await captureManager.setVideoHandler1(replayMacPrimaryFrameCompositorHandler(frameCompositor))
-            await captureManager.setVideoHandler2(replayMacSecondaryFrameCompositorHandler(frameCompositor))
+            await captureManager.setVideoHandler1(replayCapPrimaryFrameCompositorHandler(frameCompositor))
+            await captureManager.setVideoHandler2(replayCapSecondaryFrameCompositorHandler(frameCompositor))
         case .separateFiles:
-            await captureManager.setVideoHandler1(replayMacVideoEncodeHandler(dualDisplay1VideoEncoder))
-            await captureManager.setVideoHandler2(replayMacVideoEncodeHandler(dualDisplay2VideoEncoder))
+            await captureManager.setVideoHandler1(replayCapVideoEncodeHandler(dualDisplay1VideoEncoder))
+            await captureManager.setVideoHandler2(replayCapVideoEncodeHandler(dualDisplay2VideoEncoder))
         }
     }
 

@@ -8,7 +8,7 @@
     <true/>
     <key>com.apple.security.device.audio-input</key>
     <true/>
-    <!-- Default output location ~/Movies/ReplayMac -->
+    <!-- Default output location ~/Movies/ReplayCap -->
     <key>com.apple.security.assets.movies.read-write</key>
     <true/>
     <!-- Custom output folders chosen via NSOpenPanel (persisted with

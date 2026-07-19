@@ -85,7 +85,7 @@ final class VideoCropTests: XCTestCase {
     @MainActor
     func testVideoCompositionExportsCroppedDimensions() async throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ReplayMacCropTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ReplayCapCropTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -113,7 +113,7 @@ final class VideoCropTests: XCTestCase {
     @MainActor
     func testGIFExporterWritesCroppedFrameDimensions() async throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ReplayMacGIFCropTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ReplayCapGIFCropTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
 

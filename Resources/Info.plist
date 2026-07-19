@@ -5,15 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>ReplayMac</string>
+    <string>ReplayCap</string>
     <key>CFBundleIdentifier</key>
     <string>com.replaymac.app</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleIconFile</key>
-    <string>ReplayMac</string>
+    <string>ReplayCap</string>
     <key>CFBundleName</key>
-    <string>ReplayMac</string>
+    <string>ReplayCap</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -31,8 +31,8 @@
     <key>NSScreenCaptureUsageDescription</key>
     <string>Screen recording access is required to keep a rolling replay buffer and save clips when you ask.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>ReplayMac needs microphone access to include your voice in captured clips.</string>
+    <string>ReplayCap needs microphone access to include your voice in captured clips.</string>
     <key>NSAudioCaptureUsageDescription</key>
-    <string>ReplayMac needs audio capture permission to record system audio in your clips.</string>
+    <string>ReplayCap needs audio capture permission to record system audio in your clips.</string>
 </dict>
 </plist>

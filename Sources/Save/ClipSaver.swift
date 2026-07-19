@@ -36,7 +36,7 @@ public actor ClipSaver {
     private let dualDisplay2VideoRingBuffer: VideoRingBuffer?
     private let systemAudioRingBuffer: AudioRingBuffer?
     private let micRingBuffer: AudioRingBuffer?
-    private let logger = Logger(subsystem: "com.replaymac", category: "Save")
+    private let logger = Logger(subsystem: "com.replaycap", category: "Save")
 
     public init(
         videoRingBuffer: VideoRingBuffer,
@@ -225,7 +225,7 @@ public actor ClipSaver {
         try await finishWriting(writer)
         print("[SAVE] finishWriting returned")
 
-        NotificationCenter.default.post(name: .replayMacClipSaved, object: fileURL)
+        NotificationCenter.default.post(name: .replayCapClipSaved, object: fileURL)
 
         return fileURL
     }

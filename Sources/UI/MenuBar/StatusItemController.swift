@@ -1,3 +1,4 @@
+import Branding
 import Cocoa
 import SwiftUI
 import KeyboardShortcuts
@@ -137,7 +138,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "Quit ReplayMac", action: #selector(quitApp), keyEquivalent: "")
+        let quitItem = NSMenuItem(title: "Quit \(AppBranding.name)", action: #selector(quitApp), keyEquivalent: "")
         quitItem.target = self
         menu.addItem(quitItem)
 
@@ -230,13 +231,13 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
             if AppSettings.longBufferEnabled {
                 let longReplayCap = TimeInterval(AppSettings.longBufferDurationSeconds)
                 let available = min(state.extendedBufferElapsedSeconds, longReplayCap)
-                button.toolTip = "ReplayMac — Recording \(state.formattedRecordingDuration) · Extended replay \(MenuBarState.formattedDuration(available))/\(MenuBarState.formattedDuration(longReplayCap))"
+                button.toolTip = "\(AppBranding.name) — Recording \(state.formattedRecordingDuration) · Extended replay \(MenuBarState.formattedDuration(available))/\(MenuBarState.formattedDuration(longReplayCap))"
             } else {
                 let cap = TimeInterval(AppSettings.bufferDurationSeconds)
-                button.toolTip = "ReplayMac — Recording \(state.formattedRecordingDuration) · Quick replay \(state.formattedBufferDuration)/\(MenuBarState.formattedDuration(cap))"
+                button.toolTip = "\(AppBranding.name) — Recording \(state.formattedRecordingDuration) · Quick replay \(state.formattedBufferDuration)/\(MenuBarState.formattedDuration(cap))"
             }
         } else {
-            button.toolTip = "ReplayMac — Not recording"
+            button.toolTip = "\(AppBranding.name) — Not recording"
         }
     }
 

@@ -1,3 +1,4 @@
+import Branding
 import Foundation
 
 public struct CaptureUserMessage: Sendable {
@@ -16,12 +17,12 @@ public extension CaptureInterruption {
         case .systemStopped:
             return CaptureUserMessage(
                 title: "Recording Paused",
-                body: "macOS interrupted screen capture. ReplayMac will resume when your session is active."
+                body: "macOS interrupted screen capture. \(AppBranding.name) will resume when your session is active."
             )
         case .permissionRevoked:
             return CaptureUserMessage(
                 title: "Screen Recording Disabled",
-                body: "ReplayMac no longer has Screen Recording permission. Enable it in System Settings → Privacy & Security → Screen Recording."
+                body: "\(AppBranding.name) no longer has Screen Recording permission. Enable it in System Settings → Privacy & Security → Screen Recording."
             )
         case .displayDisconnected:
             return CaptureUserMessage(
@@ -43,12 +44,12 @@ public extension CapturePermissionError {
         case .denied:
             return CaptureUserMessage(
                 title: "Screen Recording Permission Required",
-                body: "Enable ReplayMac in System Settings → Privacy & Security → Screen Recording, then choose Start Recording from the menu bar."
+                body: "Enable \(AppBranding.name) in System Settings → Privacy & Security → Screen Recording, then choose Start Recording from the menu bar."
             )
         case .noDisplaysAvailable:
             return CaptureUserMessage(
                 title: "No Displays Available",
-                body: "ReplayMac could not find a display to capture."
+                body: "\(AppBranding.name) could not find a display to capture."
             )
         case .pickerFailed(let error):
             return CaptureUserMessage(

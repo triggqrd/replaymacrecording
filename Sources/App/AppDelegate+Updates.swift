@@ -32,6 +32,8 @@ extension AppDelegate {
 // must contain no reference to out-of-store downloads.
 #if !APPSTORE
 extension UpdateChecker {
+    // The GitHub repo keeps the ReplayMac name; only the App Store product
+    // (which never compiles this code) is branded ReplayCap.
     private static let latestReleaseAPIURL = URL(
         string: "https://api.github.com/repos/picccassso/ReplayMac/releases/latest"
     )!
@@ -74,4 +76,3 @@ private enum UpdateCheckError: Error {
     case invalidResponse
 }
 #endif
-

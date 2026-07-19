@@ -67,7 +67,7 @@ public struct ClipLibraryView: View {
         .onChange(of: selection) { _, _ in
             syncDraftFromSelection()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .replayMacClipSaved)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .replayCapClipSaved)) { _ in
             Task { await model.reload() }
         }
         .alert("Delete Clip?", isPresented: deleteAlertBinding, presenting: deleteCandidate) { row in

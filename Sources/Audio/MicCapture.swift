@@ -18,7 +18,7 @@ public enum MicCaptureError: Error {
 /// a burst of samples then stops — so we use AVAudioEngine instead.
 public final class MicCapture: @unchecked Sendable {
     private let engine = AVAudioEngine()
-    private let processingQueue = DispatchQueue(label: "com.replaymac.microphone.processing", qos: .userInitiated)
+    private let processingQueue = DispatchQueue(label: "com.replaycap.microphone.processing", qos: .userInitiated)
     private let lock = NSLock()
     private var handler: ((CMSampleBuffer) -> Void)?
     private var firstBufferHostTime: CMTime?

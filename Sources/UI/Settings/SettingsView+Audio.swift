@@ -1,3 +1,4 @@
+import Branding
 import SwiftUI
 import Audio
 import Defaults
@@ -62,7 +63,7 @@ extension SettingsView {
                 Label("Combines system audio and microphone into one track for sharing. Turn off for separate tracks in editors.", systemImage: "info.circle")
                     .foregroundStyle(AppTheme.textSecondary)
                     .font(.system(size: 12, design: .rounded))
-                Toggle("Exclude ReplayMac audio", isOn: $excludeOwnAppAudio)
+                Toggle("Exclude \(AppBranding.name) audio", isOn: $excludeOwnAppAudio)
                     .disabled(systemAudioModeBinding.wrappedValue == .off)
             } header: {
                 sectionHeader(icon: "waveform", title: "Sources")

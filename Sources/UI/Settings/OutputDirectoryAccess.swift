@@ -9,7 +9,7 @@ public extension Defaults.Keys {
 /// Keeps sandbox access to a user-chosen output directory across launches.
 ///
 /// App Store builds require every output folder, including the suggested
-/// `~/Movies/ReplayMac` location, to be selected through the standard folder
+/// `~/Movies/ReplayCap` location, to be selected through the standard folder
 /// picker. The scoped access is held open for the app's lifetime because clips
 /// can be saved at any moment while recording.
 @MainActor

@@ -38,9 +38,9 @@ public actor CaptureManager {
     private nonisolated let delegate1 = CaptureDelegate()
     private nonisolated let delegate2 = CaptureDelegate()
 
-    private let videoQueue = DispatchQueue(label: "com.replaymac.video", qos: .userInteractive)
-    private let secondaryVideoQueue = DispatchQueue(label: "com.replaymac.video.secondary", qos: .userInteractive)
-    private let audioQueue = DispatchQueue(label: "com.replaymac.audio", qos: .userInitiated)
+    private let videoQueue = DispatchQueue(label: "com.replaycap.video", qos: .userInteractive)
+    private let secondaryVideoQueue = DispatchQueue(label: "com.replaycap.video.secondary", qos: .userInteractive)
+    private let audioQueue = DispatchQueue(label: "com.replaycap.audio", qos: .userInitiated)
 
     // Single-display config for restart
     private var currentFilter: SCContentFilter?
@@ -56,7 +56,7 @@ public actor CaptureManager {
     private var userInitiatedStop = false
 
     private var interruptionHandler: (@Sendable (CaptureInterruption) -> Void)?
-    private let logger = Logger(subsystem: "com.replaymac", category: "CaptureRecovery")
+    private let logger = Logger(subsystem: "com.replaycap", category: "CaptureRecovery")
 
     public init() {}
 

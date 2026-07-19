@@ -11,18 +11,18 @@ final class UserHomeTests: XCTestCase {
         let dir = ClipMetadata.defaultOutputDirectory
         XCTAssertFalse(dir.path.contains("/Library/Containers/"))
         XCTAssertTrue(dir.path.hasPrefix(UserHome.directory.path))
-        XCTAssertTrue(dir.path.contains("Movies/ReplayMac"))
+        XCTAssertTrue(dir.path.contains("Movies/ReplayCap"))
     }
 
     func testAbbreviateReplacesHomeWithTilde() {
         let home = UserHome.directory.path(percentEncoded: false)
         XCTAssertEqual(
-            UserHome.abbreviateForDisplay(home + "Movies/ReplayMac/"),
-            "~/Movies/ReplayMac"
+            UserHome.abbreviateForDisplay(home + "Movies/ReplayCap/"),
+            "~/Movies/ReplayCap"
         )
         XCTAssertEqual(
-            UserHome.abbreviateForDisplay(home + "Movies/ReplayMac"),
-            "~/Movies/ReplayMac"
+            UserHome.abbreviateForDisplay(home + "Movies/ReplayCap"),
+            "~/Movies/ReplayCap"
         )
     }
 

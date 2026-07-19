@@ -1,3 +1,4 @@
+import Branding
 import SwiftUI
 import AppKit
 import Defaults
@@ -77,10 +78,10 @@ public struct OnboardingView: View {
                 .resizable()
                 .frame(width: 96, height: 96)
 
-            Text("Welcome to ReplayMac")
+            Text("Welcome to \(AppBranding.name)")
                 .font(.system(size: 26, weight: .bold, design: .rounded))
 
-            Text("Never miss a moment. ReplayMac keeps a rolling recording of your screen so the highlight is always ready to save — after it happens.")
+            Text("Never miss a moment. \(AppBranding.name) keeps a rolling recording of your screen so the highlight is always ready to save — after it happens.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(AppTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -143,7 +144,7 @@ public struct OnboardingView: View {
 
                 Text(
                     hasSelectedOutputDirectory
-                        ? "ReplayMac will save clips in this folder. Nothing is uploaded anywhere."
+                        ? "\(AppBranding.name) will save clips in this folder. Nothing is uploaded anywhere."
                         : "No folder selected. Choose a user-accessible folder before continuing."
                 )
                     .font(.caption)
@@ -217,10 +218,10 @@ public struct OnboardingView: View {
         stepLayout(
             icon: "checkmark.circle",
             title: "You're all set",
-            subtitle: "A couple of startup preferences, then ReplayMac gets out of your way in the menu bar."
+            subtitle: "A couple of startup preferences, then \(AppBranding.name) gets out of your way in the menu bar."
         ) {
             VStack(alignment: .leading, spacing: 18) {
-                Toggle("Launch ReplayMac at login", isOn: $launchAtLogin)
+                Toggle("Launch \(AppBranding.name) at login", isOn: $launchAtLogin)
                 Toggle("Start recording automatically on launch", isOn: $autoStartRecordingOnLaunch)
                 Toggle("Show a notification when a clip is saved", isOn: $showNotificationOnSave)
 

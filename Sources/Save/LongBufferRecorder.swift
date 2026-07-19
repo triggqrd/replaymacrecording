@@ -91,7 +91,7 @@ public actor LongBufferRecorder {
     private let writerFinisher: WriterFinisher
     private let writerBuilder: WriterBuilder
     private let clipExporter: ClipExporter
-    private let logger = Logger(subsystem: "com.replaymac", category: "LongBuffer")
+    private let logger = Logger(subsystem: "com.replaycap", category: "LongBuffer")
 
     public init() {
         writerFinisher = Self.finishWriter
@@ -117,6 +117,8 @@ public actor LongBufferRecorder {
         isEnabled = enabled
         self.maxDurationSeconds = maxDurationSeconds
         let requestedSegmentDirectory = outputDirectory
+            .appendingPathComponent(".ReplayCapLongBuffer", isDirectory: true)
+        let legacySegmentDirectory = outputDirectory
             .appendingPathComponent(".ReplayMacLongBuffer", isDirectory: true)
         segmentDirectory = requestedSegmentDirectory
         droppedVideoSamples = 0
@@ -125,6 +127,7 @@ public actor LongBufferRecorder {
         latestVideoPTS = nil
 
         cleanupOrphanedSegmentsIfNeeded(in: requestedSegmentDirectory)
+        cleanupOrphanedSegmentsIfNeeded(in: legacySegmentDirectory)
 
         if !enabled {
             await stop(deleteSegments: true)
@@ -386,7 +389,7 @@ public actor LongBufferRecorder {
         exportID: String
     ) async throws -> StagedExport {
         let stagingRoot = outputDirectory
-            .appendingPathComponent(".ReplayMacLongBufferExports", isDirectory: true)
+            .appendingPathComponent(".ReplayCapLongBufferExports", isDirectory: true)
         let stagingDirectory = stagingRoot.appendingPathComponent(exportID, isDirectory: true)
 
         return try await Task.detached(priority: .userInitiated) {
@@ -453,7 +456,7 @@ public actor LongBufferRecorder {
         guard let segmentDirectory else { return }
         try FileManager.default.createDirectory(at: segmentDirectory, withIntermediateDirectories: true)
 
-        let fileName = "ReplayMac_LongBuffer_\(Int(Date().timeIntervalSince1970))_\(UUID().uuidString).mp4"
+        let fileName = "ReplayCap_LongBuffer_\(Int(Date().timeIntervalSince1970))_\(UUID().uuidString).mp4"
         let url = segmentDirectory.appendingPathComponent(fileName)
         var installedWriter = false
         defer {
@@ -781,7 +784,7 @@ public actor LongBufferRecorder {
         }
 
         var removedCount = 0
-        for url in files where isReplayMacSegmentFile(url) && !knownURLs.contains(url) {
+        for url in files where isReplayCapSegmentFile(url) && !knownURLs.contains(url) {
             do {
                 try FileManager.default.removeItem(at: url)
                 removedCount += 1
@@ -800,9 +803,10 @@ public actor LongBufferRecorder {
         removeEmptyDirectoryIfPossible(directory)
     }
 
-    private func isReplayMacSegmentFile(_ url: URL) -> Bool {
+    private func isReplayCapSegmentFile(_ url: URL) -> Bool {
         guard url.pathExtension.lowercased() == "mp4",
-              url.lastPathComponent.hasPrefix("ReplayMac_LongBuffer_") else {
+              url.lastPathComponent.hasPrefix("ReplayCap_LongBuffer_")
+                || url.lastPathComponent.hasPrefix("ReplayMac_LongBuffer_") else {
             return false
         }
         return (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true

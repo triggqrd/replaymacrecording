@@ -1,7 +1,7 @@
 # XcodeGen spec for the Mac App Store wrapper project.
 #
 # The SwiftPM package at the repo root stays the source of truth; this app
-# target compiles Sources/App directly and links the package's ReplayMacKit
+# target compiles Sources/App directly and links the package's ReplayCapKit
 # library product. Regenerate the project after changing this file:
 #
 #   xcodegen generate --spec AppStore/project.yml
@@ -10,36 +10,36 @@
 # App Store archiving and upload (Product > Archive in Xcode, or
 # xcodebuild archive). Once enrolled in the developer program, set your
 # team in Signing & Capabilities (or DEVELOPMENT_TEAM below).
-name: ReplayMac
+name: ReplayCap
 options:
   createIntermediateGroups: true
   deploymentTarget:
     macOS: "15.0"
 packages:
-  ReplayMacPackage:
+  ReplayCapPackage:
     path: ..
   Defaults:
     url: https://github.com/sindresorhus/Defaults
     from: 9.0.0
 targets:
-  ReplayMac:
+  ReplayCap:
     type: application
     platform: macOS
     sources:
       - path: ../Sources/App
         group: App
-      - path: ../Resources/ReplayMac.icns
+      - path: ../Resources/ReplayCap.icns
         buildPhase: resources
     dependencies:
-      - package: ReplayMacPackage
-        product: ReplayMacKit
+      - package: ReplayCapPackage
+        product: ReplayCapKit
       - package: Defaults
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.replaymac.app
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: ../Resources/Info.plist
-        CODE_SIGN_ENTITLEMENTS: ../Resources/ReplayMac.appstore.entitlements
+        CODE_SIGN_ENTITLEMENTS: ../Resources/ReplayCap.appstore.entitlements
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: QZTBSUBN77
         "CODE_SIGN_IDENTITY[sdk=macosx*]": Apple Development

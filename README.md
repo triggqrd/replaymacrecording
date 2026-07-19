@@ -1,5 +1,7 @@
 # ReplayMac
 
+> **Looking for ReplayCap?** That's this app's Mac App Store edition. Apple's App Review doesn't allow "Mac" in App Store app names (Guideline 5.2.5), so the store version ships under a different name — same app, same features.
+
 <img src="ReplayMac_icon.png" alt="ReplayMac icon" width="220" />
 
 ReplayMac is a macOS menu bar instant-replay clipper.
@@ -41,9 +43,9 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 
 Grab the latest release from the [Releases](https://github.com/picccassso/ReplayMac/releases) page. Updates are manual — download new releases from GitHub when you want to upgrade.
 
-ReplayMac is now notarized by Apple, so it opens like any other app — no Gatekeeper workarounds needed.
+ReplayMac is notarized by Apple, so it opens like any other app — no Gatekeeper workarounds needed.
 
-> **Coming soon:** a Mac App Store version of ReplayMac. Buying it is a great way to help fund development.
+> **Coming soon:** a Mac App Store version, published as **ReplayCap**. Buying it is a great way to help fund development.
 
 ## Build from source
 
@@ -61,9 +63,9 @@ Saved clips are written to:
 
 ReplayMac exports MP4 clips. It does not create a separate `.aac` sidecar file; when audio merging is turned off, the system and microphone audio are stored as separate audio tracks inside the saved MP4.
 
-When the extended replay buffer is enabled, ReplayMac also writes temporary rolling segments to a hidden `.ReplayMacLongBuffer` folder inside the output directory. Those segments are rotated automatically and removed when extended replay is disabled or recording stops.
+When the extended replay buffer is enabled, ReplayMac also writes temporary rolling segments to a hidden `.ReplayCapLongBuffer` folder inside the output directory. Those segments are rotated automatically and removed when extended replay is disabled or recording stops.
 
-Clip library notes, tags, display names, and favorite state are stored in a hidden `.ReplayMacClipLibrary.json` file inside the output directory.
+Clip library notes, tags, display names, and favorite state are stored in a hidden `.ReplayCapClipLibrary.json` file inside the output directory. (These internal names are shared with the App Store edition; existing `.ReplayMac…` files are migrated automatically.)
 
 ## Capture resolution
 
@@ -78,6 +80,8 @@ For dual-display recording, Retina is applied per display. HiDPI displays use th
 
 <details>
 <summary>Screenshots</summary>
+
+> These screenshots were captured before the ReplayMac rename and may still show the former ReplayMac name. They will be refreshed with the next release.
 
 <table>
   <tr>

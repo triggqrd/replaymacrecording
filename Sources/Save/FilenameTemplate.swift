@@ -1,3 +1,4 @@
+import Branding
 import Foundation
 
 /// Resolves a user-defined clip file-name template into a safe base name.
@@ -6,8 +7,10 @@ import Foundation
 /// tokens (e.g. an unknown foreground app) can't leave stray or illegal
 /// characters in the file name.
 public enum FilenameTemplate {
-    /// Reproduces the historical `ReplayMac_<date>_<time>` naming.
-    public static let `default` = "ReplayMac_{date}_{time}"
+    /// Produces the standard `<AppBranding.name>_<date>_<time>` naming, so
+    /// direct builds keep the historical `ReplayMac_` prefix while App Store
+    /// builds write `ReplayCap_`.
+    public static var `default`: String { "\(AppBranding.name)_{date}_{time}" }
 
     /// Tokens shown in Settings, paired with a short description.
     public static let tokens: [(token: String, description: String)] = [

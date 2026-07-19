@@ -10,7 +10,7 @@ final class SavePipelineTests: XCTestCase {
 
     func testDefaultOutputDirectory() {
         let dir = ClipMetadata.defaultOutputDirectory
-        XCTAssertTrue(dir.path.contains("Movies/ReplayMac"))
+        XCTAssertTrue(dir.path.contains("Movies/ReplayCap"))
     }
 
     func testCreateOutputDirectoryIfNeeded() throws {
@@ -30,7 +30,7 @@ final class SavePipelineTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let url1 = try ClipMetadata.generateUniqueFileURL(in: tempDir)
-        XCTAssertTrue(url1.lastPathComponent.hasPrefix("ReplayMac_"))
+        XCTAssertTrue(url1.lastPathComponent.hasPrefix("ReplayCap_"))
         XCTAssertTrue(url1.pathExtension == "mp4")
 
         try Data().write(to: url1)
@@ -58,7 +58,7 @@ final class SavePipelineTests: XCTestCase {
         XCTAssertEqual(items.count, 2)
 
         let values = items.compactMap { $0.stringValue }
-        XCTAssertTrue(values.contains("ReplayMac"))
+        XCTAssertTrue(values.contains("ReplayCap"))
         // ISO8601 date string contains 'T' separator
         XCTAssertTrue(values.contains { $0.contains("T") })
     }

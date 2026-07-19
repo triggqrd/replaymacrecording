@@ -124,6 +124,14 @@ private enum AppDefaultValues {
 }
 
 public enum AppSettings {
+    /// Updates only the old built-in file-name template. Custom templates and
+    /// previously selected output folders remain untouched across the rename.
+    public static func migrateLegacyBrandDefaults() {
+        if Defaults[.clipFilenameTemplate] == "ReplayMac_{date}_{time}" {
+            Defaults[.clipFilenameTemplate] = FilenameTemplate.default
+        }
+    }
+
     public static var bufferDurationSeconds: Int { Defaults[.bufferDurationSeconds] }
 
     public static var outputDirectoryURL: URL {

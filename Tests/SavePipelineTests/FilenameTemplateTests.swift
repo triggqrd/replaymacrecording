@@ -13,13 +13,13 @@ final class FilenameTemplateTests: XCTestCase {
         return Calendar.current.date(from: components)!
     }()
 
-    func testDefaultTemplateReproducesLegacyName() {
+    func testDefaultTemplateUsesReplayCapName() {
         let result = FilenameTemplate.resolve(
             template: FilenameTemplate.default,
             appName: "Rocket League",
             date: referenceDate
         )
-        XCTAssertEqual(result, "ReplayMac_2026-06-22_11-00-21")
+        XCTAssertEqual(result, "ReplayCap_2026-06-22_11-00-21")
     }
 
     func testAppTokenIsSubstituted() {
@@ -56,6 +56,6 @@ final class FilenameTemplateTests: XCTestCase {
             appName: nil,
             date: referenceDate
         )
-        XCTAssertEqual(result, "ReplayMac_2026-06-22_11-00-21")
+        XCTAssertEqual(result, "ReplayCap_2026-06-22_11-00-21")
     }
 }

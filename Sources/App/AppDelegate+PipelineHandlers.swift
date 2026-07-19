@@ -7,25 +7,25 @@ import RingBuffer
 import Save
 import UI
 
-func replayMacVideoEncodeHandler(_ encoder: VideoEncoder) -> @Sendable (CMSampleBuffer) -> Void {
+func replayCapVideoEncodeHandler(_ encoder: VideoEncoder) -> @Sendable (CMSampleBuffer) -> Void {
     { sampleBuffer in
         encoder.encode(sampleBuffer: sampleBuffer)
     }
 }
 
-func replayMacPrimaryFrameCompositorHandler(_ frameCompositor: FrameCompositor) -> @Sendable (CMSampleBuffer) -> Void {
+func replayCapPrimaryFrameCompositorHandler(_ frameCompositor: FrameCompositor) -> @Sendable (CMSampleBuffer) -> Void {
     { sampleBuffer in
         frameCompositor.pushPrimaryFrame(sampleBuffer)
     }
 }
 
-func replayMacSecondaryFrameCompositorHandler(_ frameCompositor: FrameCompositor) -> @Sendable (CMSampleBuffer) -> Void {
+func replayCapSecondaryFrameCompositorHandler(_ frameCompositor: FrameCompositor) -> @Sendable (CMSampleBuffer) -> Void {
     { sampleBuffer in
         frameCompositor.pushSecondaryFrame(sampleBuffer)
     }
 }
 
-func replayMacSystemAudioProcessHandler(_ systemAudioCapture: SystemAudioCapture) -> @Sendable (CMSampleBuffer) -> Void {
+func replayCapSystemAudioProcessHandler(_ systemAudioCapture: SystemAudioCapture) -> @Sendable (CMSampleBuffer) -> Void {
     { sampleBuffer in
         if AppSettings.captureSystemAudio {
             systemAudioCapture.process(sampleBuffer: sampleBuffer)
@@ -33,13 +33,13 @@ func replayMacSystemAudioProcessHandler(_ systemAudioCapture: SystemAudioCapture
     }
 }
 
-func replayMacPerAppAudioHandler(_ systemAudioCapture: SystemAudioCapture) -> @Sendable (CMSampleBuffer) -> Void {
+func replayCapPerAppAudioHandler(_ systemAudioCapture: SystemAudioCapture) -> @Sendable (CMSampleBuffer) -> Void {
     { sampleBuffer in
         systemAudioCapture.process(sampleBuffer: sampleBuffer)
     }
 }
 
-func replayMacPrimaryVideoOutputHandler(
+func replayCapPrimaryVideoOutputHandler(
     videoRingBuffer: VideoRingBuffer,
     longBufferAppendPump: LongBufferAppendPump
 ) -> VideoEncoder.OutputHandler {
@@ -49,23 +49,23 @@ func replayMacPrimaryVideoOutputHandler(
     }
 }
 
-func replayMacDualVideoOutputHandler(_ videoRingBuffer: VideoRingBuffer) -> VideoEncoder.OutputHandler {
+func replayCapDualVideoOutputHandler(_ videoRingBuffer: VideoRingBuffer) -> VideoEncoder.OutputHandler {
     { sampleBuffer in
         videoRingBuffer.append(encodedSample: sampleBuffer)
     }
 }
 
-func replayMacFrameCompositorOutputHandler(_ videoEncoder: VideoEncoder) -> FrameCompositor.OutputHandler {
-    replayMacVideoEncodeHandler(videoEncoder)
+func replayCapFrameCompositorOutputHandler(_ videoEncoder: VideoEncoder) -> FrameCompositor.OutputHandler {
+    replayCapVideoEncodeHandler(videoEncoder)
 }
 
-func replayMacAudioEncodeHandler(_ audioEncoder: AudioEncoder) -> @Sendable (CMSampleBuffer) -> Void {
+func replayCapAudioEncodeHandler(_ audioEncoder: AudioEncoder) -> @Sendable (CMSampleBuffer) -> Void {
     { sampleBuffer in
         audioEncoder.encode(sampleBuffer: sampleBuffer)
     }
 }
 
-func replayMacSystemAudioOutputHandler(
+func replayCapSystemAudioOutputHandler(
     systemAudioRingBuffer: AudioRingBuffer,
     longBufferAppendPump: LongBufferAppendPump
 ) -> AudioEncoder.OutputHandler {
@@ -75,7 +75,7 @@ func replayMacSystemAudioOutputHandler(
     }
 }
 
-func replayMacMicrophoneOutputHandler(
+func replayCapMicrophoneOutputHandler(
     micAudioRingBuffer: AudioRingBuffer,
     longBufferAppendPump: LongBufferAppendPump
 ) -> AudioEncoder.OutputHandler {

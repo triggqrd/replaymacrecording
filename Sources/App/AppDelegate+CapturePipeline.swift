@@ -2,6 +2,7 @@ import Foundation
 import os
 
 import Audio
+import Branding
 import Capture
 import Defaults
 import Encode
@@ -9,32 +10,32 @@ import Feedback
 import Save
 import UI
 
-let captureRecoveryLogger = Logger(subsystem: "com.replaymac", category: "CaptureRecovery")
+let captureRecoveryLogger = Logger(subsystem: "com.replaycap", category: "CaptureRecovery")
 
 @MainActor
 extension AppDelegate {
     func configurePipelines() {
-        videoEncoder.outputHandler = replayMacPrimaryVideoOutputHandler(
+        videoEncoder.outputHandler = replayCapPrimaryVideoOutputHandler(
             videoRingBuffer: videoRingBuffer,
             longBufferAppendPump: longBufferAppendPump
         )
-        dualDisplay1VideoEncoder.outputHandler = replayMacDualVideoOutputHandler(dualDisplay1VideoRingBuffer)
-        dualDisplay2VideoEncoder.outputHandler = replayMacDualVideoOutputHandler(dualDisplay2VideoRingBuffer)
+        dualDisplay1VideoEncoder.outputHandler = replayCapDualVideoOutputHandler(dualDisplay1VideoRingBuffer)
+        dualDisplay2VideoEncoder.outputHandler = replayCapDualVideoOutputHandler(dualDisplay2VideoRingBuffer)
 
-        frameCompositor.outputHandler = replayMacFrameCompositorOutputHandler(videoEncoder)
+        frameCompositor.outputHandler = replayCapFrameCompositorOutputHandler(videoEncoder)
 
-        systemAudioEncoder.outputHandler = replayMacSystemAudioOutputHandler(
+        systemAudioEncoder.outputHandler = replayCapSystemAudioOutputHandler(
             systemAudioRingBuffer: systemAudioRingBuffer,
             longBufferAppendPump: longBufferAppendPump
         )
-        systemAudioCapture.setHandler(replayMacAudioEncodeHandler(systemAudioEncoder))
-        perAppAudioCapture.setHandler(replayMacPerAppAudioHandler(systemAudioCapture))
+        systemAudioCapture.setHandler(replayCapAudioEncodeHandler(systemAudioEncoder))
+        perAppAudioCapture.setHandler(replayCapPerAppAudioHandler(systemAudioCapture))
 
-        micAudioEncoder.outputHandler = replayMacMicrophoneOutputHandler(
+        micAudioEncoder.outputHandler = replayCapMicrophoneOutputHandler(
             micAudioRingBuffer: micAudioRingBuffer,
             longBufferAppendPump: longBufferAppendPump
         )
-        micAudioCapture.setHandler(replayMacAudioEncodeHandler(micAudioEncoder))
+        micAudioCapture.setHandler(replayCapAudioEncodeHandler(micAudioEncoder))
     }
 
     func startCapturePipeline(userInitiated: Bool = true) {
@@ -105,7 +106,7 @@ extension AppDelegate {
             if isDual {
                     let dualSaveMode = AppSettings.dualCaptureSaveModeEnum
                     await configureDualVideoHandlers(saveMode: dualSaveMode)
-                    await captureManager.setAudioHandler1(replayMacSystemAudioProcessHandler(systemAudioCapture))
+                    await captureManager.setAudioHandler1(replayCapSystemAudioProcessHandler(systemAudioCapture))
 
                     let captureDisplayID1 = AppSettings.captureDisplayID.isEmpty ? nil : AppSettings.captureDisplayID
                     let captureDisplayID2 = AppSettings.captureDisplayID2.isEmpty ? nil : AppSettings.captureDisplayID2
@@ -291,8 +292,8 @@ extension AppDelegate {
         bitrate: Int,
         captureAudio: Bool
     ) async throws {
-        await captureManager.setVideoHandler(replayMacVideoEncodeHandler(videoEncoder))
-        await captureManager.setAudioHandler(replayMacSystemAudioProcessHandler(systemAudioCapture))
+        await captureManager.setVideoHandler(replayCapVideoEncodeHandler(videoEncoder))
+        await captureManager.setAudioHandler(replayCapSystemAudioProcessHandler(systemAudioCapture))
 
         let config = try await captureManager.start(
             interactivePermissionPrompt: userInitiated,
@@ -571,7 +572,7 @@ extension AppDelegate {
                 captureRecoveryLogger.info("Capture recovery succeeded after \(reason, privacy: .public)")
                 NotificationManager.shared.showOperationalNotification(
                     title: "Recording Resumed",
-                    body: "ReplayMac resumed recording after \(reason)."
+                    body: "\(AppBranding.name) resumed recording after \(reason)."
                 )
             } else {
                 self.captureRecoveryAttempts += 1
@@ -584,7 +585,7 @@ extension AppDelegate {
                 if !shouldRetry {
                     NotificationManager.shared.showOperationalNotification(
                         title: "Recording Could Not Resume",
-                        body: "ReplayMac could not restore screen capture automatically. Choose Start Recording to try again."
+                        body: "\(AppBranding.name) could not restore screen capture automatically. Choose Start Recording to try again."
                     )
                 }
             }

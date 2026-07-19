@@ -1,3 +1,4 @@
+import Branding
 import Foundation
 import AppKit
 @preconcurrency import UserNotifications
@@ -80,7 +81,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             }
 
             guard settings.authorizationStatus != .denied else {
-                print("Notifications are disabled for ReplayMac in System Settings.")
+                print("Notifications are disabled for \(AppBranding.name) in System Settings.")
                 return
             }
 
@@ -135,7 +136,7 @@ public final class NotificationManager: NSObject, UNUserNotificationCenterDelega
             }
 
             guard settings.authorizationStatus != .denied else {
-                print("Notifications are disabled for ReplayMac in System Settings.")
+                print("Notifications are disabled for \(AppBranding.name) in System Settings.")
                 return
             }
 

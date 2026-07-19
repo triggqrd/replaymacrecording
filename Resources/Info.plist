@@ -2,37 +2,37 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleExecutable</key>
-    <string>ReplayCap</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.replaymac.app</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleIconFile</key>
-    <string>ReplayCap</string>
-    <key>CFBundleName</key>
-    <string>ReplayCap</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.6.7</string>
-    <key>CFBundleVersion</key>
-    <string>1.6.7</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>15.0</string>
-    <key>LSApplicationCategoryType</key>
-    <string>public.app-category.video</string>
-    <key>NSHumanReadableCopyright</key>
-    <string>© 2026 Alex (picccassso)</string>
-    <key>ITSAppUsesNonExemptEncryption</key>
-    <false/>
-    <key>NSScreenCaptureUsageDescription</key>
-    <string>Screen recording access is required to keep a rolling replay buffer and save clips when you ask.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>ReplayCap needs microphone access to include your voice in captured clips.</string>
-    <key>NSAudioCaptureUsageDescription</key>
-    <string>ReplayCap needs audio capture permission to record system audio in your clips.</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>ReplayCap</string>
+	<key>CFBundleIconFile</key>
+	<string>ReplayCap</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.replaymac.app</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>ReplayCap</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.6.7</string>
+	<key>CFBundleVersion</key>
+	<string>1.6.10</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.video</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>15.0</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>ReplayCap needs audio capture permission to record system audio in your clips.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Alex (picccassso)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ReplayCap needs microphone access to include your voice in captured clips.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Screen recording access is required to keep a rolling replay buffer and save clips when you ask.</string>
 </dict>
 </plist>

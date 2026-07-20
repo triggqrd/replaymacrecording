@@ -209,8 +209,11 @@ extension AppDelegate {
         NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
         onboardingWindowController = nil
 
+        // Game auto-record keeps the app idle until a game runs, so it must not
+        // begin an always-on buffer straight out of onboarding.
         if Defaults[.hasCompletedOnboarding],
            AppSettings.autoStartRecordingOnLaunch,
+           !AppSettings.autoRecordGamesEnabled,
            !isCaptureRunning {
             startCapturePipeline(userInitiated: false)
         }

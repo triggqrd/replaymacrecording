@@ -310,3 +310,48 @@ final class CaptureHealthTests: XCTestCase {
         XCTAssertFalse(CaptureInterruptionClassifier.isSystemStoppedStream(error))
     }
 }
+
+final class GameAppClassifierTests: XCTestCase {
+    func testParentGamesCategoryIsAGame() {
+        XCTAssertTrue(GameAppClassifier.isGameCategory("public.app-category.games"))
+    }
+
+    func testGenreSubcategoriesAreGames() {
+        XCTAssertTrue(GameAppClassifier.isGameCategory("public.app-category.action-games"))
+        XCTAssertTrue(GameAppClassifier.isGameCategory("public.app-category.role-playing-games"))
+        XCTAssertTrue(GameAppClassifier.isGameCategory("public.app-category.sports-games"))
+    }
+
+    func testNonGameCategoriesAreNotGames() {
+        XCTAssertFalse(GameAppClassifier.isGameCategory("public.app-category.productivity"))
+        XCTAssertFalse(GameAppClassifier.isGameCategory("public.app-category.developer-tools"))
+    }
+
+    func testMalformedOrMissingCategoryIsNotAGame() {
+        XCTAssertFalse(GameAppClassifier.isGameCategory(nil))
+        XCTAssertFalse(GameAppClassifier.isGameCategory(""))
+        XCTAssertFalse(GameAppClassifier.isGameCategory("games"))
+        // A stray "-games" suffix without the App Store prefix must not match.
+        XCTAssertFalse(GameAppClassifier.isGameCategory("com.example.board-games"))
+    }
+
+    func testManualBundleIDOverridesUnknownCategory() {
+        XCTAssertTrue(
+            GameAppClassifier.isGame(
+                bundleIdentifier: "com.valvesoftware.steam.game",
+                category: nil,
+                manualBundleIDs: ["com.valvesoftware.steam.game"]
+            )
+        )
+    }
+
+    func testNonListedNonGameCategoryIsNotAGame() {
+        XCTAssertFalse(
+            GameAppClassifier.isGame(
+                bundleIdentifier: "com.apple.Safari",
+                category: "public.app-category.productivity",
+                manualBundleIDs: ["com.valvesoftware.steam.game"]
+            )
+        )
+    }
+}

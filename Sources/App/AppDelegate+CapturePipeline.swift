@@ -399,6 +399,9 @@ extension AppDelegate {
     }
 
     func toggleCapturePipeline() {
+        // A manual start or stop hands recording control back to the user, so
+        // the game watcher must no longer treat this session as one it owns.
+        recordingAutoStartedByGame = false
         if isCaptureRunning {
             Task { await stopCapturePipelineAsync() }
         } else {

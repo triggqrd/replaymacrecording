@@ -82,10 +82,19 @@ extension SettingsView {
             Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                 Toggle("Auto-start recording on launch", isOn: $autoStartRecordingOnLaunch)
+                    .disabled(autoRecordGamesEnabled)
                 Toggle("Resume recording after wake", isOn: $resumeRecordingAfterWake)
             } header: {
                 sectionHeader(icon: "power", title: "Startup")
+            } footer: {
+                if autoRecordGamesEnabled {
+                    Text("Auto-start is off while “Automatically record while playing games” is on — the app stays idle and records only when a game is running.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
             }
+
+            gamesSection
 
             if let launchAtLoginError {
                 Section {

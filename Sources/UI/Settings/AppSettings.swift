@@ -145,6 +145,9 @@ public enum AppSettings {
 
     public static var autoStartRecordingOnLaunch: Bool { Defaults[.autoStartRecordingOnLaunch] }
     public static var resumeRecordingAfterWake: Bool { Defaults[.resumeRecordingAfterWake] }
+    public static var autoRecordGamesEnabled: Bool { Defaults[.autoRecordGamesEnabled] }
+    public static var autoRecordStopWhenGameCloses: Bool { Defaults[.autoRecordStopWhenGameCloses] }
+    public static var autoRecordGameBundleIDs: [String] { Defaults[.autoRecordGameBundleIDs] }
     public static var captureSystemAudio: Bool { Defaults[.captureSystemAudio] }
     public static var captureMicrophone: Bool { Defaults[.captureMicrophone] }
     public static var mergeAudioTracks: Bool { Defaults[.mergeAudioTracks] }
@@ -283,6 +286,9 @@ public extension Defaults.Keys {
     static let launchAtLogin = Key<Bool>("launchAtLogin", default: false)
     static let autoStartRecordingOnLaunch = Key<Bool>("autoStartRecordingOnLaunch", default: true)
     static let resumeRecordingAfterWake = Key<Bool>("resumeRecordingAfterWake", default: true)
+    static let autoRecordGamesEnabled = Key<Bool>("autoRecordGamesEnabled", default: false)
+    static let autoRecordStopWhenGameCloses = Key<Bool>("autoRecordStopWhenGameCloses", default: true)
+    static let autoRecordGameBundleIDs = Key<[String]>("autoRecordGameBundleIDs", default: [])
 
     static let videoCodec = Key<String>("videoCodec", default: VideoCodec.hevc.rawValue)
     static let captureMode = Key<String>("captureMode", default: "single")

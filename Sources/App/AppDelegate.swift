@@ -42,6 +42,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     let menuBarState = MenuBarState()
     let statusItemController = StatusItemController()
     let hotkeyManager = HotkeyManager()
+    let gameActivityMonitor = GameActivityMonitor()
+
+    /// True while the current recording was started automatically because a game
+    /// is running. Ensures the game watcher only stops recordings it started,
+    /// never a manual one.
+    var recordingAutoStartedByGame = false
 
     var isCaptureRunning = false
     var isWorkspaceSessionActive = true
@@ -156,9 +162,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         // First launch: walk through the setup assistant before anything
         // records. Auto-start (and its screen-recording permission prompt)
         // waits until the user finishes onboarding.
+        //
+        // When game auto-record is on it owns the recording lifecycle: the app
+        // stays idle (no buffering) until a game runs, so it must not auto-start
+        // here. If a game is already open at launch, setupGameAutoRecord's scan
+        // starts recording instead.
         if !Defaults[.hasCompletedOnboarding] {
             showOnboardingWindow()
-        } else if AppSettings.autoStartRecordingOnLaunch {
+        } else if AppSettings.autoStartRecordingOnLaunch, !AppSettings.autoRecordGamesEnabled {
             startCapturePipeline(userInitiated: false)
         }
 
@@ -167,6 +178,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         }
 
         setupSettingsObservations()
+        setupGameAutoRecord()
         syncMemoryCapsToSettings()
 
         DispatchQueue.main.async { [weak self] in

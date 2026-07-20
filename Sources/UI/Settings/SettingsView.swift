@@ -12,6 +12,9 @@ public struct SettingsView: View {
     @Default(.launchAtLogin) var launchAtLogin
     @Default(.autoStartRecordingOnLaunch) var autoStartRecordingOnLaunch
     @Default(.resumeRecordingAfterWake) var resumeRecordingAfterWake
+    @Default(.autoRecordGamesEnabled) var autoRecordGamesEnabled
+    @Default(.autoRecordStopWhenGameCloses) var autoRecordStopWhenGameCloses
+    @Default(.autoRecordGameBundleIDs) var autoRecordGameBundleIDs
 
     @Default(.videoCodec) var videoCodecRawValue
     @Default(.captureMode) var captureModeRawValue

@@ -15,19 +15,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     let captureManager = CaptureManager()
     let frameCompositor = FrameCompositor()
     let videoEncoder = VideoEncoder()
-    lazy var videoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
+    lazy var videoRingBuffer = VideoRingBuffer(timeCap: AppSettings.ringBufferTimeCapSeconds)
     let dualDisplay1VideoEncoder = VideoEncoder()
     let dualDisplay2VideoEncoder = VideoEncoder()
-    lazy var dualDisplay1VideoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
-    lazy var dualDisplay2VideoRingBuffer = VideoRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
+    lazy var dualDisplay1VideoRingBuffer = VideoRingBuffer(timeCap: AppSettings.ringBufferTimeCapSeconds)
+    lazy var dualDisplay2VideoRingBuffer = VideoRingBuffer(timeCap: AppSettings.ringBufferTimeCapSeconds)
 
     let systemAudioCapture = SystemAudioCapture()
     let perAppAudioCapture = PerAppAudioCapture()
     let micAudioCapture = MicCapture()
     let systemAudioEncoder = AudioEncoder()
     let micAudioEncoder = AudioEncoder()
-    lazy var systemAudioRingBuffer = AudioRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
-    lazy var micAudioRingBuffer = AudioRingBuffer(timeCap: TimeInterval(AppSettings.bufferDurationSeconds))
+    lazy var systemAudioRingBuffer = AudioRingBuffer(timeCap: AppSettings.ringBufferTimeCapSeconds)
+    lazy var micAudioRingBuffer = AudioRingBuffer(timeCap: AppSettings.ringBufferTimeCapSeconds)
 
     lazy var clipSaver = ClipSaver(
         videoRingBuffer: videoRingBuffer,

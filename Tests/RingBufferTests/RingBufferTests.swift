@@ -90,6 +90,43 @@ final class RingBufferTests: XCTestCase {
         XCTAssertGreaterThan(duration, 3.5)
     }
 
+    /// Regression: GOP-granular eviction settles the buffer just under `timeCap`,
+    /// so retaining exactly the requested window returns less than that window.
+    /// Retaining the window plus one-GOP-plus headroom must hand out the full
+    /// requested duration. Mirrors "Save Last 30 Seconds" with 2s keyframes.
+    func testSamplesLastReturnsFullWindowWithHeadroom() {
+        let requested = 30.0
+        let headroom = 3.0 // AppSettings.ringBufferHeadroomSeconds
+        let buffer = VideoRingBuffer(timeCap: requested + headroom, memoryCap: 1_500_000_000)
+
+        // 60 seconds of 60fps frames, keyframe every 2 seconds (GOP = 2s).
+        for i in 0..<3600 {
+            let pts = Double(i) / 60.0
+            let isKeyframe = (i % 120 == 0)
+            buffer.append(encodedSample: Self.makeSampleBuffer(pts: pts, isKeyframe: isKeyframe))
+        }
+
+        let samples = buffer.samples(last: requested)
+        let firstPTS = CMSampleBufferGetPresentationTimeStamp(samples.first!).seconds
+        let lastPTS = CMSampleBufferGetPresentationTimeStamp(samples.last!).seconds
+        XCTAssertGreaterThanOrEqual(
+            lastPTS - firstPTS, requested,
+            "Buffer with headroom must retain the full requested window"
+        )
+
+        // Sanity check the failure mode: without headroom the window comes up short.
+        let tight = VideoRingBuffer(timeCap: requested, memoryCap: 1_500_000_000)
+        for i in 0..<3600 {
+            let pts = Double(i) / 60.0
+            let isKeyframe = (i % 120 == 0)
+            tight.append(encodedSample: Self.makeSampleBuffer(pts: pts, isKeyframe: isKeyframe))
+        }
+        let tightSamples = tight.samples(last: requested)
+        let tightSpan = CMSampleBufferGetPresentationTimeStamp(tightSamples.last!).seconds
+            - CMSampleBufferGetPresentationTimeStamp(tightSamples.first!).seconds
+        XCTAssertLessThan(tightSpan, requested, "Without headroom the window is short by up to one GOP")
+    }
+
     func testEvictionByMemory() {
         let buffer = VideoRingBuffer(timeCap: 100.0, memoryCap: 5000)
 

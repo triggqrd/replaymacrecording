@@ -134,6 +134,21 @@ public enum AppSettings {
 
     public static var bufferDurationSeconds: Int { Defaults[.bufferDurationSeconds] }
 
+    /// Extra seconds retained in the ring buffers beyond the user-facing replay
+    /// window. Video eviction is GOP-granular — whole keyframe groups (~2s at the
+    /// encoder's 2s max keyframe interval) drop at once — so without headroom the
+    /// buffer settles just under the requested duration and a "Save Last 30s"
+    /// comes up short (e.g. 29s). One keyframe interval of slack plus a small
+    /// margin guarantees the full window is always retained.
+    public static let ringBufferHeadroomSeconds: TimeInterval = 3.0
+
+    /// Internal ring-buffer time cap: the user-facing replay window plus headroom.
+    /// Saves still request exactly `bufferDurationSeconds`; the extra retention
+    /// only exists so that full window is always available to hand out.
+    public static var ringBufferTimeCapSeconds: TimeInterval {
+        TimeInterval(bufferDurationSeconds) + ringBufferHeadroomSeconds
+    }
+
     public static var outputDirectoryURL: URL {
         let path = Defaults[.outputDirectoryPath]
         guard !path.isEmpty else {

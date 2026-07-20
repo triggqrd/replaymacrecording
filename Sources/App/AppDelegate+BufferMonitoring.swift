@@ -22,19 +22,22 @@ extension AppDelegate {
     }
 
     func syncBufferDurationToSettings() {
-        let duration = TimeInterval(AppSettings.bufferDurationSeconds)
-        videoRingBuffer.timeCap = duration
-        dualDisplay1VideoRingBuffer.timeCap = duration
-        dualDisplay2VideoRingBuffer.timeCap = duration
-        systemAudioRingBuffer.timeCap = duration
-        micAudioRingBuffer.timeCap = duration
+        // Retain the requested window plus headroom so GOP-granular eviction never
+        // leaves the buffer short of a full "Save Last N Seconds" (see
+        // AppSettings.ringBufferHeadroomSeconds).
+        let cap = AppSettings.ringBufferTimeCapSeconds
+        videoRingBuffer.timeCap = cap
+        dualDisplay1VideoRingBuffer.timeCap = cap
+        dualDisplay2VideoRingBuffer.timeCap = cap
+        systemAudioRingBuffer.timeCap = cap
+        micAudioRingBuffer.timeCap = cap
 
         guard isCaptureRunning else { return }
-        videoRingBuffer.trimToDuration(maxSeconds: duration)
-        dualDisplay1VideoRingBuffer.trimToDuration(maxSeconds: duration)
-        dualDisplay2VideoRingBuffer.trimToDuration(maxSeconds: duration)
-        systemAudioRingBuffer.trimToDuration(maxSeconds: duration)
-        micAudioRingBuffer.trimToDuration(maxSeconds: duration)
+        videoRingBuffer.trimToDuration(maxSeconds: cap)
+        dualDisplay1VideoRingBuffer.trimToDuration(maxSeconds: cap)
+        dualDisplay2VideoRingBuffer.trimToDuration(maxSeconds: cap)
+        systemAudioRingBuffer.trimToDuration(maxSeconds: cap)
+        micAudioRingBuffer.trimToDuration(maxSeconds: cap)
     }
 
     func startMonitoring() {

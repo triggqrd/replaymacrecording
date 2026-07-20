@@ -195,7 +195,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
         let quickReplayCap = TimeInterval(replaySeconds)
         let capLabel = MenuBarState.formattedDuration(quickReplayCap)
-        var bufferLine = "Quick replay: \(state.formattedBufferDuration) / \(capLabel) · \(state.formattedBufferMemory)"
+        // The buffer retains headroom beyond the replay window; don't surface more
+        // than the window the user can actually save.
+        let bufferedLabel = MenuBarState.formattedDuration(min(state.bufferedSeconds, quickReplayCap))
+        var bufferLine = "Quick replay: \(bufferedLabel) / \(capLabel) · \(state.formattedBufferMemory)"
         if state.isRecording && state.bufferedSeconds < TimeInterval(replaySeconds) {
             bufferLine += " (filling…)"
         } else if state.isRecording {
@@ -234,7 +237,8 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
                 button.toolTip = "\(AppBranding.name) — Recording \(state.formattedRecordingDuration) · Extended replay \(MenuBarState.formattedDuration(available))/\(MenuBarState.formattedDuration(longReplayCap))"
             } else {
                 let cap = TimeInterval(AppSettings.bufferDurationSeconds)
-                button.toolTip = "\(AppBranding.name) — Recording \(state.formattedRecordingDuration) · Quick replay \(state.formattedBufferDuration)/\(MenuBarState.formattedDuration(cap))"
+                let buffered = MenuBarState.formattedDuration(min(state.bufferedSeconds, cap))
+                button.toolTip = "\(AppBranding.name) — Recording \(state.formattedRecordingDuration) · Quick replay \(buffered)/\(MenuBarState.formattedDuration(cap))"
             }
         } else {
             button.toolTip = "\(AppBranding.name) — Not recording"

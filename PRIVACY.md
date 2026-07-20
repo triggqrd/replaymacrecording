@@ -1,6 +1,8 @@
 # ReplayMac Privacy Policy
 
-**Last updated: 8 July 2026**
+**Last updated: 20 July 2026**
+
+ReplayMac is distributed on the Mac App Store under the name **ReplayCap**; this policy covers both editions.
 
 ReplayMac does not collect, store, transmit, or share any personal data.
 
@@ -14,7 +16,7 @@ ReplayMac does not collect, store, transmit, or share any personal data.
 
 ReplayMac contains no analytics, no telemetry, no crash reporting, no advertising, no user accounts, and no third-party SDKs that phone home.
 
-The Mac App Store version of ReplayMac makes **no network connections at all** — it does not request network access from macOS.
+The Mac App Store version (ReplayCap) makes **no network connections at all** — it does not request network access from macOS.
 
 The version distributed on GitHub makes exactly one type of network request: an optional check of the public GitHub Releases page at launch to see whether a newer version exists. This request sends no personal information beyond what any web request inherently includes, and nothing about it is logged or stored by the developer.
 

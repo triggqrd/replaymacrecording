@@ -170,7 +170,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         if !Defaults[.hasCompletedOnboarding] {
             showOnboardingWindow()
         } else if AppSettings.autoStartRecordingOnLaunch, !AppSettings.autoRecordGamesEnabled {
-            startCapturePipeline(userInitiated: false)
+            // Auto-start must not overlap the app's first layout pass: spinning up
+            // the capture pipeline during launch-time SwiftUI/AppKit layout has
+            // been observed (macOS 26.5) corrupting the process's main dispatch
+            // queue header, after which any main-actor isolation check crashes.
+            // Deferring capture past the launch window avoids the overlap.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                guard let self, !self.isCaptureRunning else { return }
+                self.startCapturePipeline(userInitiated: false)
+            }
         }
 
         bufferDurationObservation = Defaults.observe(.bufferDurationSeconds) { [weak self] _ in

@@ -353,16 +353,30 @@ extension AppDelegate {
             captureRecoveryTask = nil
         }
         guard isCaptureRunning else {
+            if isSessionRecording {
+                await stopSessionRecording(userInitiated: false)
+            }
             return
         }
 
         monitoringTask?.cancel()
         monitoringTask = nil
 
+        // Finalize session to a real file before tearing capture down. On a
+        // recoverable interruption we discard instead so resume starts clean.
+        if isSessionRecording {
+            if preserveResumeIntent {
+                await discardSessionRecording()
+            } else {
+                await stopSessionRecording(userInitiated: false)
+            }
+        }
+
         await captureManager.stop()
         await perAppAudioCapture.stop()
         longBufferAppendPump.reset()
         await longBufferRecorder.stop(deleteSegments: !preserveResumeIntent)
+        await sessionRecorder.stop(deleteSegments: true)
         micAudioCapture.stop()
         videoEncoder.stop()
         dualDisplay1VideoEncoder.stop()
@@ -375,6 +389,7 @@ extension AppDelegate {
         isCaptureRunning = false
         menuBarState.setRecording(false)
         menuBarState.setExtendedBufferRecording(false)
+        menuBarState.setSessionRecording(false)
         menuBarState.setBufferedSeconds(0)
         statusItemController.refreshPresentation()
     }
@@ -395,6 +410,15 @@ extension AppDelegate {
                 title: "Long Buffer Disabled",
                 body: "Extended replay is not available while dual display clips are saved as separate files."
             )
+        }
+
+        // Session recording uses the primary/composited stream only.
+        if isSessionRecording && separateDualSave {
+            NotificationManager.shared.showOperationalNotification(
+                title: "Session Recording Stopped",
+                body: "Session recording can’t continue while dual display clips are saved as separate files. Saving what was captured…"
+            )
+            await stopSessionRecording(userInitiated: false)
         }
     }
 

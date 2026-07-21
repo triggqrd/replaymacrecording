@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add session recording: start→stop capture that writes continuously and saves one MP4 (screen + system audio + mic) when stopped — available from the menu bar and a new hotkey, independent of the instant-replay buffer
 - Publish the Mac App Store edition as ReplayCap after App Review rejected "Mac" in the app name (Guideline 5.2.5); the direct/GitHub build keeps the ReplayMac name via a launch-time branding constant shared across both builds
 - Share on-disk metadata and long-buffer names between both editions (`.ReplayCapClipLibrary.json`, `.ReplayCapLongBuffer`), migrating existing `.ReplayMac…` files automatically
 - Notarize the direct-download build: release DMGs are signed with a Developer ID certificate, hardened runtime, and a stapled notarization ticket, so the app opens without Gatekeeper workarounds

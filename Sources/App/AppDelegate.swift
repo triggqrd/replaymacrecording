@@ -37,7 +37,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         micRingBuffer: micAudioRingBuffer
     )
     let longBufferRecorder = LongBufferRecorder()
-    lazy var longBufferAppendPump = LongBufferAppendPump(recorder: longBufferRecorder)
+    let sessionRecorder = LongBufferRecorder()
+    lazy var longBufferAppendPump = LongBufferAppendPump(
+        recorders: [longBufferRecorder, sessionRecorder]
+    )
+    /// True while a start→stop session recording is actively writing to disk.
+    var isSessionRecording = false
+    var isSessionFinalizeInProgress = false
+    var isTerminatingAfterSessionSave = false
 
     let menuBarState = MenuBarState()
     let statusItemController = StatusItemController()
@@ -135,6 +142,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         statusItemController.onSaveLongBuffer = { [weak self] in
             self?.saveLongBufferFromUI()
         }
+        statusItemController.onToggleSessionRecording = { [weak self] in
+            self?.toggleSessionRecording()
+        }
         statusItemController.onToggleRecording = { [weak self] in
             self?.toggleCapturePipeline()
         }
@@ -198,7 +208,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         monitoringTask?.cancel()
         settingsReconcileTask?.cancel()
         captureRecoveryTask?.cancel()
-        stopCapturePipeline()
+        if !isTerminatingAfterSessionSave {
+            stopCapturePipeline()
+        }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // Finish an in-progress session recording before quitting so the file
+        // is not left as orphaned temp segments.
+        guard isSessionRecording || isSessionFinalizeInProgress else {
+            return .terminateNow
+        }
+        if isTerminatingAfterSessionSave {
+            return .terminateNow
+        }
+        isTerminatingAfterSessionSave = true
+        Task { @MainActor in
+            await stopSessionRecording(userInitiated: false)
+            await stopCapturePipelineAsync()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

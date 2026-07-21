@@ -8,6 +8,7 @@ public final class HotkeyManager: @unchecked Sendable {
     public var onSaveLast15Seconds: (() -> Void)?
     public var onSaveLast60Seconds: (() -> Void)?
     public var onSaveLongBuffer: (() -> Void)?
+    public var onToggleSessionRecording: (() -> Void)?
     public var onOpenClipLibrary: (() -> Void)?
 
     private var isStarted = false
@@ -20,6 +21,7 @@ public final class HotkeyManager: @unchecked Sendable {
         KeyboardShortcuts.removeHandler(for: .saveLast15Seconds)
         KeyboardShortcuts.removeHandler(for: .saveLast60Seconds)
         KeyboardShortcuts.removeHandler(for: .saveLongBuffer)
+        KeyboardShortcuts.removeHandler(for: .toggleSessionRecording)
         KeyboardShortcuts.removeHandler(for: .openClipLibrary)
     }
 
@@ -43,6 +45,9 @@ public final class HotkeyManager: @unchecked Sendable {
         }
         KeyboardShortcuts.onKeyUp(for: .saveLongBuffer) { [weak self] in
             self?.onSaveLongBuffer?()
+        }
+        KeyboardShortcuts.onKeyUp(for: .toggleSessionRecording) { [weak self] in
+            self?.onToggleSessionRecording?()
         }
         KeyboardShortcuts.onKeyUp(for: .openClipLibrary) { [weak self] in
             self?.onOpenClipLibrary?()

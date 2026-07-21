@@ -11,6 +11,7 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 ## Features
 
 - **Instant replay** — Continuously buffers the last N seconds (15–300) of screen and audio; save retroactively with a click or hotkey.
+- **Session recording** — Record until you stop, then save one file with screen, system audio, and microphone (menu bar or hotkey).
 - **Dual display support** — Capture one or two monitors, saved as a side-by-side composite or as separate files.
 - **Hardware-accelerated encoding** — HEVC or H.264 via VideoToolbox, with configurable resolution, frame rate, and bitrate.
 - **Retina-aware recording** — Record HiDPI displays at their backing pixel resolution while keeping the macOS UI at its comfortable scaled size.
@@ -18,7 +19,7 @@ It continuously buffers recent screen/audio capture and saves the last N seconds
 - **Live audio level meters** — Real-time RMS-based level meters for system audio and microphone in audio settings.
 - **Ring buffer memory management** — Configurable memory cap (256 MB–4 GB) shared across all replay buffers, with automatic eviction under memory pressure.
 - **Extended replay buffer** — Optionally roll 5, 10, or 30 minute replay windows to disk, with SSD write and disk usage warnings before enabling.
-- **Six configurable hotkeys** — Save clip, toggle recording, save last 15s, save last 60s, save extended replay, open clip library.
+- **Configurable hotkeys** — Save clip, toggle recording, save last 15s, save last 60s, save extended replay, start/stop session recording, open clip library.
 - **Clip library** — Browse, preview, trim, crop, export, or export as GIF; rename, tag, favorite, and batch-act on multiple clips at once.
 - **Crop on export** — Drag a crop area directly over the preview, or snap it to 16:9, 1:1, 4:3, or 9:16; the crop applies to both MP4 and GIF exports.
 - **Clip sharing** — Open the macOS share sheet or copy a clip file for pasting into another app.

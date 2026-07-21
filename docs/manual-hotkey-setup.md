@@ -6,6 +6,9 @@ recorder from registering key presses. Until Apple fixes it, you can set any
 hotkey from the Terminal instead. This is completely safe and fully reversible
 — it writes the same preference the Settings UI would.
 
+Session recording uses `KeyboardShortcuts_toggleSessionRecording` (start/stop
+and save one continuous file).
+
 ## How to set a hotkey
 
 1. **Quit ReplayMac** (menu bar icon → Quit). This matters: if the app is
@@ -32,6 +35,7 @@ You only change three things: the **action name**, the **key code**, and the
 | Save last 15 seconds | `KeyboardShortcuts_saveLast15Seconds` |
 | Save last 60 seconds | `KeyboardShortcuts_saveLast60Seconds` |
 | Save extended replay | `KeyboardShortcuts_saveLongBuffer` |
+| Start/stop session recording | `KeyboardShortcuts_toggleSessionRecording` |
 | Open clip library | `KeyboardShortcuts_openClipLibrary` |
 
 ## The modifiers (`carbonModifiers`)
@@ -103,6 +107,12 @@ Open clip library → **⌘⌥L**:
 
 ```bash
 defaults write com.replaymac.app KeyboardShortcuts_openClipLibrary -string '{"carbonKeyCode":37,"carbonModifiers":2304}'
+```
+
+Start/stop session recording → **⌘⇧E**:
+
+```bash
+defaults write com.replaymac.app KeyboardShortcuts_toggleSessionRecording -string '{"carbonKeyCode":14,"carbonModifiers":768}'
 ```
 
 ## Removing a hotkey

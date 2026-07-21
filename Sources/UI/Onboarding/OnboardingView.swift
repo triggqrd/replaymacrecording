@@ -206,7 +206,7 @@ public struct OnboardingView: View {
                 KeyboardShortcuts.Recorder("Save clip", name: .saveClip)
                 KeyboardShortcuts.Recorder("Start/stop recording", name: .toggleRecording)
 
-                Text("Quick presets (save last 15 or 60 seconds, extended replay, open library) can be assigned in Settings → Hotkeys.")
+                Text("Quick presets (save last 15 or 60 seconds, extended replay, session recording, open library) can be assigned in Settings → Hotkeys.")
                     .font(.caption)
                     .foregroundStyle(AppTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

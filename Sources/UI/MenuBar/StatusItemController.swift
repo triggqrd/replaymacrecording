@@ -10,11 +10,13 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
     private var state = MenuBarState()
     private var saveItem: NSMenuItem?
     private var saveLongBufferItem: NSMenuItem?
+    private var toggleSessionRecordingItem: NSMenuItem?
     private var toggleRecordingItem: NSMenuItem?
     private var libraryItem: NSMenuItem?
     private var revealLastClipItem: NSMenuItem?
     private var openLastClipItem: NSMenuItem?
     private var recordingDurationItem: NSMenuItem?
+    private var sessionDurationItem: NSMenuItem?
     private var bufferUsageItem: NSMenuItem?
     private var longBufferUsageItem: NSMenuItem?
     private var hotkeyHintItem: NSMenuItem?
@@ -24,6 +26,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
     public var onSaveClip: (() -> Void)?
     public var onSaveLongBuffer: (() -> Void)?
+    public var onToggleSessionRecording: (() -> Void)?
     public var onToggleRecording: (() -> Void)?
     public var onOpenClipLibrary: (() -> Void)?
     public var onOpenSettings: (() -> Void)?
@@ -95,6 +98,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         saveLongBufferItem.target = self
         menu.addItem(saveLongBufferItem)
 
+        let toggleSessionRecordingItem = NSMenuItem(title: "", action: #selector(toggleSessionRecording), keyEquivalent: "")
+        toggleSessionRecordingItem.target = self
+        menu.addItem(toggleSessionRecordingItem)
+
         let hotkeyHintItem = NSMenuItem(title: "No hotkey set — configure in Settings", action: nil, keyEquivalent: "")
         hotkeyHintItem.isEnabled = false
         menu.addItem(hotkeyHintItem)
@@ -118,6 +125,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         let recordingDurationItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         recordingDurationItem.isEnabled = false
         menu.addItem(recordingDurationItem)
+
+        let sessionDurationItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        sessionDurationItem.isEnabled = false
+        menu.addItem(sessionDurationItem)
 
         let bufferUsageItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         bufferUsageItem.isEnabled = false
@@ -144,11 +155,13 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
         self.saveItem = saveItem
         self.saveLongBufferItem = saveLongBufferItem
+        self.toggleSessionRecordingItem = toggleSessionRecordingItem
         self.toggleRecordingItem = toggleRecordingItem
         self.libraryItem = libraryItem
         self.openLastClipItem = openLastClipItem
         self.revealLastClipItem = revealLastClipItem
         self.recordingDurationItem = recordingDurationItem
+        self.sessionDurationItem = sessionDurationItem
         self.bufferUsageItem = bufferUsageItem
         self.longBufferUsageItem = longBufferUsageItem
         self.hotkeyHintItem = hotkeyHintItem
@@ -178,6 +191,11 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
             saveInProgress: state.isSaveInProgress
         )
 
+        toggleSessionRecordingItem?.title = state.isSessionRecording
+            ? "Stop & Save Session"
+            : "Start Session Recording"
+        toggleSessionRecordingItem?.isEnabled = !state.isSaveInProgress
+
         toggleRecordingItem?.title = state.isRecording ? "Stop Recording" : "Start Recording"
 
         libraryItem?.title = "Clip Library"
@@ -192,6 +210,9 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
         recordingDurationItem?.title = "Recording: \(state.formattedRecordingDuration)"
         recordingDurationItem?.isHidden = !state.isRecording
+
+        sessionDurationItem?.title = "Session: \(state.formattedSessionDuration)"
+        sessionDurationItem?.isHidden = !state.isSessionRecording
 
         let quickReplayCap = TimeInterval(replaySeconds)
         let capLabel = MenuBarState.formattedDuration(quickReplayCap)
@@ -230,7 +251,9 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
     private func updateTooltip() {
         guard let button = statusItem?.button else { return }
 
-        if state.isRecording {
+        if state.isSessionRecording {
+            button.toolTip = "\(AppBranding.name) — Session \(state.formattedSessionDuration) (stop to save)"
+        } else if state.isRecording {
             if AppSettings.longBufferEnabled {
                 let longReplayCap = TimeInterval(AppSettings.longBufferDurationSeconds)
                 let available = min(state.extendedBufferElapsedSeconds, longReplayCap)
@@ -256,6 +279,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
     @objc private func saveLongBuffer() {
         onSaveLongBuffer?()
+    }
+
+    @objc private func toggleSessionRecording() {
+        onToggleSessionRecording?()
     }
 
     @objc private func toggleRecording() {
@@ -320,6 +347,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
             || KeyboardShortcuts.getShortcut(for: .saveLast15Seconds) != nil
             || KeyboardShortcuts.getShortcut(for: .saveLast60Seconds) != nil
             || KeyboardShortcuts.getShortcut(for: .saveLongBuffer) != nil
+            || KeyboardShortcuts.getShortcut(for: .toggleSessionRecording) != nil
     }
 }
 
@@ -347,7 +375,14 @@ private struct StatusBadgeView: View {
                 Text("Failed")
                     .foregroundStyle(AppTheme.danger)
             case .idle:
-                if state.isRecording {
+                if state.isSessionRecording {
+                    Circle()
+                        .fill(AppTheme.danger)
+                        .frame(width: 8, height: 8)
+                        .frame(width: 12, height: 12)
+                    Text("S \(state.formattedSessionDuration)")
+                        .foregroundStyle(AppTheme.textPrimary)
+                } else if state.isRecording {
                     Circle()
                         .fill(AppTheme.danger)
                         .frame(width: 8, height: 8)
@@ -376,6 +411,7 @@ private struct StatusBadgeView: View {
         .onPreferenceChange(StatusWidthPreferenceKey.self, perform: onWidthChange)
         .animation(.easeOut(duration: 0.2), value: state.saveStatus)
         .animation(.easeOut(duration: 0.2), value: state.isRecording)
+        .animation(.easeOut(duration: 0.2), value: state.isSessionRecording)
         .animation(.easeOut(duration: 0.2), value: state.bufferedSeconds)
     }
 
@@ -388,7 +424,7 @@ private struct StatusBadgeView: View {
         case .saving:
             return AppTheme.accent.opacity(0.12)
         case .idle:
-            if state.isRecording {
+            if state.isSessionRecording || state.isRecording {
                 return AppTheme.danger.opacity(0.12)
             }
             return AppTheme.accent.opacity(0.10)

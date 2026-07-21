@@ -11,9 +11,11 @@ public enum SaveStatus: Equatable {
 @MainActor
 public final class MenuBarState: ObservableObject {
     @Published public private(set) var isRecording = false
+    @Published public private(set) var isSessionRecording = false
     @Published public private(set) var saveStatus: SaveStatus = .idle
     @Published public private(set) var recordingElapsedSeconds: TimeInterval = 0
     @Published public private(set) var extendedBufferElapsedSeconds: TimeInterval = 0
+    @Published public private(set) var sessionElapsedSeconds: TimeInterval = 0
     @Published public private(set) var bufferedSeconds: TimeInterval = 0
     @Published public private(set) var bufferMemoryBytes: Int = 0
     @Published public private(set) var availableUpdate: AvailableUpdate?
@@ -21,6 +23,7 @@ public final class MenuBarState: ObservableObject {
     private var saveStatusResetTask: Task<Void, Never>?
     private var recordingStartedAt: Date?
     private var extendedBufferStartedAt: Date?
+    private var sessionStartedAt: Date?
 
     public init() {}
 
@@ -40,12 +43,14 @@ public final class MenuBarState: ObservableObject {
     }
 
     public func updateRecordingElapsed(at date: Date = Date()) {
-        guard isRecording, let recordingStartedAt else {
-            return
+        if isRecording, let recordingStartedAt {
+            recordingElapsedSeconds = max(0, date.timeIntervalSince(recordingStartedAt))
         }
-        recordingElapsedSeconds = max(0, date.timeIntervalSince(recordingStartedAt))
         if let extendedBufferStartedAt {
             extendedBufferElapsedSeconds = max(0, date.timeIntervalSince(extendedBufferStartedAt))
+        }
+        if isSessionRecording, let sessionStartedAt {
+            sessionElapsedSeconds = max(0, date.timeIntervalSince(sessionStartedAt))
         }
     }
 
@@ -57,6 +62,17 @@ public final class MenuBarState: ObservableObject {
             extendedBufferStartedAt = nil
             extendedBufferElapsedSeconds = 0
         }
+    }
+
+    public func setSessionRecording(_ isRecording: Bool, at date: Date = Date()) {
+        if isRecording && !isSessionRecording {
+            sessionStartedAt = date
+            sessionElapsedSeconds = 0
+        } else if !isRecording {
+            sessionStartedAt = nil
+            sessionElapsedSeconds = 0
+        }
+        isSessionRecording = isRecording
     }
 
     public func setBufferedSeconds(_ bufferedSeconds: TimeInterval) {
@@ -114,8 +130,11 @@ public final class MenuBarState: ObservableObject {
 
     /// Recording time shown to the user, capped at the largest configured
     /// replay window — elapsed time beyond what can still be saved isn't
-    /// actionable.
+    /// actionable. Session recording shows uncapped elapsed time instead.
     public var displayedRecordingSeconds: TimeInterval {
+        if isSessionRecording {
+            return sessionElapsedSeconds
+        }
         let quickCap = TimeInterval(AppSettings.bufferDurationSeconds)
         let cap = AppSettings.longBufferEnabled
             ? max(quickCap, TimeInterval(AppSettings.longBufferDurationSeconds))
@@ -129,6 +148,10 @@ public final class MenuBarState: ObservableObject {
 
     public var formattedExtendedBufferDuration: String {
         Self.formattedDuration(extendedBufferElapsedSeconds)
+    }
+
+    public var formattedSessionDuration: String {
+        Self.formattedDuration(sessionElapsedSeconds)
     }
 
     public static func formattedDuration(_ seconds: TimeInterval) -> String {

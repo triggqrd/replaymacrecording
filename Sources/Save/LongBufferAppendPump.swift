@@ -12,7 +12,7 @@ public final class LongBufferAppendPump: @unchecked Sendable {
         case microphone(LongBufferSample)
     }
 
-    private let recorder: LongBufferRecorder
+    private let recorders: [LongBufferRecorder]
     private let queue = DispatchQueue(label: "com.replaycap.long-buffer.append-pump", qos: .userInitiated)
     private let maxPendingSamples: Int
     private var pendingSamples: [PendingSample] = []
@@ -21,7 +21,12 @@ public final class LongBufferAppendPump: @unchecked Sendable {
     private var droppedSamples = 0
 
     public init(recorder: LongBufferRecorder, maxPendingSamples: Int = 240) {
-        self.recorder = recorder
+        self.recorders = [recorder]
+        self.maxPendingSamples = max(1, maxPendingSamples)
+    }
+
+    public init(recorders: [LongBufferRecorder], maxPendingSamples: Int = 240) {
+        self.recorders = recorders
         self.maxPendingSamples = max(1, maxPendingSamples)
     }
 
@@ -84,14 +89,21 @@ public final class LongBufferAppendPump: @unchecked Sendable {
         }
 
         let sample = pendingSamples.removeFirst()
-        Task { [weak self, recorder] in
+        let recorders = self.recorders
+        Task { [weak self] in
             switch sample {
             case .video(let sample):
-                await recorder.appendVideo(sample)
+                for recorder in recorders {
+                    await recorder.appendVideo(sample)
+                }
             case .systemAudio(let sample):
-                await recorder.appendSystemAudio(sample)
+                for recorder in recorders {
+                    await recorder.appendSystemAudio(sample)
+                }
             case .microphone(let sample):
-                await recorder.appendMicrophone(sample)
+                for recorder in recorders {
+                    await recorder.appendMicrophone(sample)
+                }
             }
 
             self?.queue.async { [weak self] in

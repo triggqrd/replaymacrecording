@@ -146,6 +146,17 @@ extension SettingsView {
             } header: {
                 sectionHeader(icon: "clock.badge.exclamationmark", title: "Long Buffer")
             }
+
+            Section {
+                Label(
+                    "Session recording is always available from the menu bar (Start Session Recording) or a hotkey in Settings → Hotkeys. It records until you stop, then saves one MP4 with screen, system audio, and microphone — no rolling buffer cutoff.",
+                    systemImage: "record.circle"
+                )
+                .foregroundStyle(AppTheme.textSecondary)
+                .font(.system(size: 12, design: .rounded))
+            } header: {
+                sectionHeader(icon: "record.circle", title: "Session Recording")
+            }
         }
         .formStyle(.grouped)
     }

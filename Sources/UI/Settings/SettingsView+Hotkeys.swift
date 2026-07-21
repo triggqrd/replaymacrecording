@@ -21,6 +21,18 @@ extension SettingsView {
             }
 
             Section {
+                KeyboardShortcuts.Recorder("Start/stop session recording", name: .toggleSessionRecording)
+                Label(
+                    "Records until you stop, then saves one file with screen, system audio, and mic. Separate from the instant-replay buffer.",
+                    systemImage: "info.circle"
+                )
+                .foregroundStyle(AppTheme.textSecondary)
+                .font(.system(size: 12, design: .rounded))
+            } header: {
+                sectionHeader(icon: "record.circle", title: "Session Recording")
+            }
+
+            Section {
                 KeyboardShortcuts.Recorder("Open clip library", name: .openClipLibrary)
             } header: {
                 sectionHeader(icon: "film.stack", title: "Library")

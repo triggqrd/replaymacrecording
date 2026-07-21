@@ -200,7 +200,9 @@ extension AppDelegate {
     func resolvedClipBaseName() -> String {
         FilenameTemplate.resolve(
             template: AppSettings.clipFilenameTemplate,
-            appName: currentForegroundAppName()
+            appName: currentForegroundAppName(),
+            dateFormat: AppSettings.clipDateFormat,
+            timeFormat: AppSettings.clipTimeFormat
         )
     }
 

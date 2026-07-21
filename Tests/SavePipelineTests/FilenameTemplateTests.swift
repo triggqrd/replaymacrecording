@@ -58,4 +58,31 @@ final class FilenameTemplateTests: XCTestCase {
         )
         XCTAssertEqual(result, "ReplayCap_2026-06-22_11-00-21")
     }
+
+    func testCustomDayFirstDateAndDottedTime() {
+        let result = FilenameTemplate.resolve(
+            template: "ReplayMac_{date}-{time}",
+            appName: nil,
+            dateFormat: "dd.MM.yyyy",
+            timeFormat: "HH.mm.ss",
+            date: referenceDate
+        )
+        XCTAssertEqual(result, "ReplayMac_22.06.2026-11.00.21")
+    }
+
+    func testEmptyFormatsFallBackToDefaults() {
+        let result = FilenameTemplate.resolve(
+            template: "{date}_{time}",
+            appName: nil,
+            dateFormat: "",
+            timeFormat: "",
+            date: referenceDate
+        )
+        XCTAssertEqual(result, "2026-06-22_11-00-21")
+    }
+
+    func testExampleUsesFixedReferenceMoment() {
+        XCTAssertEqual(FilenameTemplate.example(for: "dd.MM.yyyy"), "21.07.2026")
+        XCTAssertEqual(FilenameTemplate.example(for: "HH.mm.ss"), "14.00.15")
+    }
 }

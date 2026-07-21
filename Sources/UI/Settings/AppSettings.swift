@@ -169,6 +169,8 @@ public enum AppSettings {
     public static var playAudioCueOnSave: Bool { Defaults[.playAudioCueOnSave] }
     public static var showNotificationOnSave: Bool { Defaults[.showNotificationOnSave] }
     public static var clipFilenameTemplate: String { Defaults[.clipFilenameTemplate] }
+    public static var clipDateFormat: String { Defaults[.clipDateFormat] }
+    public static var clipTimeFormat: String { Defaults[.clipTimeFormat] }
     public static var memoryCapMB: Double { Defaults[.memoryCapMB] }
 
     public static var frameRate: Int {
@@ -330,6 +332,8 @@ public extension Defaults.Keys {
     static let playAudioCueOnSave = Key<Bool>("playAudioCueOnSave", default: true)
     static let showNotificationOnSave = Key<Bool>("showNotificationOnSave", default: true)
     static let clipFilenameTemplate = Key<String>("clipFilenameTemplate", default: FilenameTemplate.default)
+    static let clipDateFormat = Key<String>("clipDateFormat", default: FilenameTemplate.defaultDateFormat)
+    static let clipTimeFormat = Key<String>("clipTimeFormat", default: FilenameTemplate.defaultTimeFormat)
     static let longBufferEnabled = Key<Bool>("longBufferEnabled", default: false)
     static let longBufferDurationMinutes = Key<Int>("longBufferDurationMinutes", default: LongBufferDuration.fiveMinutes.rawValue)
     static let longBufferWarningAccepted = Key<Bool>("longBufferWarningAccepted", default: false)

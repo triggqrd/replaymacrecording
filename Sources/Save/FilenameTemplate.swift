@@ -12,16 +12,53 @@ public enum FilenameTemplate {
     /// builds write `ReplayCap_`.
     public static var `default`: String { "\(AppBranding.name)_{date}_{time}" }
 
+    /// `DateFormatter` pattern used for `{date}` unless the user picks another.
+    public static let defaultDateFormat = "yyyy-MM-dd"
+    /// `DateFormatter` pattern used for `{time}` unless the user picks another.
+    /// Colons are deliberately avoided — macOS remaps `:` in file names.
+    public static let defaultTimeFormat = "HH-mm-ss"
+
     /// Tokens shown in Settings, paired with a short description.
     public static let tokens: [(token: String, description: String)] = [
         ("{app}", "Foreground app name"),
-        ("{date}", "Date, e.g. 2026-06-22"),
-        ("{time}", "Time, e.g. 11-00-21")
+        ("{date}", "Date, in the format chosen below"),
+        ("{time}", "Time, in the format chosen below")
     ]
 
-    public static func resolve(template: String, appName: String?, date: Date = Date()) -> String {
-        let dateString = formatted(date, as: "yyyy-MM-dd")
-        let timeString = formatted(date, as: "HH-mm-ss")
+    /// Selectable `{date}` formats. Each stores a `DateFormatter` pattern; the UI
+    /// shows a live example so users never have to know pattern syntax.
+    public static let dateFormats: [String] = [
+        "yyyy-MM-dd",   // 2026-07-21
+        "dd.MM.yyyy",   // 21.07.2026
+        "dd-MM-yyyy",   // 21-07-2026
+        "MM-dd-yyyy",   // 07-21-2026
+        "dd MMM yyyy",  // 21 Jul 2026
+        "yyyyMMdd"      // 20260721
+    ]
+
+    /// Selectable `{time}` formats. Kept colon-free so names stay valid on disk.
+    public static let timeFormats: [String] = [
+        "HH-mm-ss",     // 14-00-15
+        "HH.mm.ss",     // 14.00.15
+        "hh.mm.ss a",   // 02.00.15 PM
+        "HHmmss"        // 140015
+    ]
+
+    /// Renders a human-readable example of a pattern for the Settings pickers,
+    /// using a fixed reference moment (21 Jul 2026, 14:00:15).
+    public static func example(for pattern: String) -> String {
+        formatted(referenceDate, as: pattern)
+    }
+
+    public static func resolve(
+        template: String,
+        appName: String?,
+        dateFormat: String = defaultDateFormat,
+        timeFormat: String = defaultTimeFormat,
+        date: Date = Date()
+    ) -> String {
+        let dateString = formatted(date, as: dateFormat.isEmpty ? defaultDateFormat : dateFormat)
+        let timeString = formatted(date, as: timeFormat.isEmpty ? defaultTimeFormat : timeFormat)
 
         var result = template
         result = result.replacingOccurrences(of: "{app}", with: appName ?? "")
@@ -31,6 +68,20 @@ public enum FilenameTemplate {
         let sanitized = sanitize(result)
         return sanitized.isEmpty ? defaultBaseName(date: date) : sanitized
     }
+
+    /// 21 Jul 2026, 14:00:15 local time — the sample used for pattern previews.
+    private static let referenceDate: Date = {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 7
+        components.day = 21
+        components.hour = 14
+        components.minute = 0
+        components.second = 15
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        return calendar.date(from: components) ?? Date()
+    }()
 
     private static func formatted(_ date: Date, as format: String) -> String {
         let formatter = DateFormatter()

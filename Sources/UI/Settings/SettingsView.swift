@@ -43,6 +43,8 @@ public struct SettingsView: View {
     @Default(.playAudioCueOnSave) var playAudioCueOnSave
     @Default(.showNotificationOnSave) var showNotificationOnSave
     @Default(.clipFilenameTemplate) var clipFilenameTemplate
+    @Default(.clipDateFormat) var clipDateFormat
+    @Default(.clipTimeFormat) var clipTimeFormat
     @Default(.longBufferEnabled) var longBufferEnabled
     @Default(.longBufferDurationMinutes) var longBufferDurationMinutes
     @Default(.longBufferWarningAccepted) var longBufferWarningAccepted

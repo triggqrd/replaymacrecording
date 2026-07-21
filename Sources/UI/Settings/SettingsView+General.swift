@@ -53,6 +53,18 @@ extension SettingsView {
                         .font(.system(.callout, design: .monospaced))
                 }
 
+                Picker("Date format", selection: $clipDateFormat) {
+                    ForEach(FilenameTemplate.dateFormats, id: \.self) { pattern in
+                        Text(FilenameTemplate.example(for: pattern)).tag(pattern)
+                    }
+                }
+
+                Picker("Time format", selection: $clipTimeFormat) {
+                    ForEach(FilenameTemplate.timeFormats, id: \.self) { pattern in
+                        Text(FilenameTemplate.example(for: pattern)).tag(pattern)
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(FilenameTemplate.tokens, id: \.token) { entry in
                         HStack(spacing: 8) {
@@ -68,9 +80,15 @@ extension SettingsView {
 
                 Button("Reset to Default") {
                     clipFilenameTemplate = FilenameTemplate.default
+                    clipDateFormat = FilenameTemplate.defaultDateFormat
+                    clipTimeFormat = FilenameTemplate.defaultTimeFormat
                 }
                 .buttonStyle(.link)
-                .disabled(clipFilenameTemplate == FilenameTemplate.default)
+                .disabled(
+                    clipFilenameTemplate == FilenameTemplate.default
+                        && clipDateFormat == FilenameTemplate.defaultDateFormat
+                        && clipTimeFormat == FilenameTemplate.defaultTimeFormat
+                )
             } header: {
                 sectionHeader(icon: "textformat", title: "Clip File Names")
             } footer: {
@@ -107,7 +125,12 @@ extension SettingsView {
     }
 
     private var filenamePreview: String {
-        FilenameTemplate.resolve(template: clipFilenameTemplate, appName: "Rocket League")
+        FilenameTemplate.resolve(
+            template: clipFilenameTemplate,
+            appName: "Rocket League",
+            dateFormat: clipDateFormat,
+            timeFormat: clipTimeFormat
+        )
     }
 
     func chooseOutputDirectory() {

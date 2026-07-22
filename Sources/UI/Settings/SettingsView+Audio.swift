@@ -125,6 +125,17 @@ extension SettingsView {
             }
 
             Section {
+                Toggle("Record system audio", isOn: $sessionRecordingSystemAudio)
+                Toggle("Record microphone", isOn: $sessionRecordingMicrophone)
+
+                Label("Independent audio for start–stop screen recording (start it from the menu bar or a hotkey; video follows the Video tab). These don't affect the replay buffer above. Changing capture or encoding settings while recording stops it — the clip so far is saved.", systemImage: "record.circle")
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .font(.system(size: 12, design: .rounded))
+            } header: {
+                sectionHeader(icon: "record.circle", title: "Screen Recording")
+            }
+
+            Section {
                 Label("Audio source changes apply automatically.", systemImage: "bolt.circle")
                     .foregroundStyle(AppTheme.textSecondary)
                     .font(.system(size: 12, design: .rounded))

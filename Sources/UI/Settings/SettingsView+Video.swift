@@ -146,17 +146,6 @@ extension SettingsView {
             } header: {
                 sectionHeader(icon: "clock.badge.exclamationmark", title: "Long Buffer")
             }
-
-            Section {
-                Toggle("Record system audio", isOn: $sessionRecordingSystemAudio)
-                Toggle("Record microphone", isOn: $sessionRecordingMicrophone)
-
-                Label("Screen recording saves a whole session to one file, using the video settings above. Its audio is independent of the replay buffer. Changing capture or encoding settings while recording stops it — the clip up to that point is saved.", systemImage: "record.circle")
-                    .foregroundStyle(AppTheme.textSecondary)
-                    .font(.system(size: 12, design: .rounded))
-            } header: {
-                sectionHeader(icon: "record.circle", title: "Screen Recording")
-            }
         }
         .formStyle(.grouped)
     }

@@ -6,6 +6,6 @@ public extension KeyboardShortcuts.Name {
     static let saveLast15Seconds = Self("saveLast15Seconds")
     static let saveLast60Seconds = Self("saveLast60Seconds")
     static let saveLongBuffer = Self("saveLongBuffer")
-    static let toggleSessionRecording = Self("toggleSessionRecording")
     static let openClipLibrary = Self("openClipLibrary")
+    static let toggleScreenRecording = Self("toggleScreenRecording")
 }

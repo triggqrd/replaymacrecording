@@ -163,7 +163,7 @@ final class LongBufferRecorderTests: XCTestCase {
 
         let gate = ExportGate()
         let observation = ExportObservation()
-        let recorder = makeFileBackedRecorder { segments, _, outputDirectory, _, _, _ in
+        let recorder = makeFileBackedRecorder { segments, _, outputDirectory, _, _ in
             await observation.record(segments.map(\.url))
             await gate.pauseExporter()
             let outputURL = outputDirectory.appendingPathComponent("SuccessfulExport.mp4")
@@ -241,7 +241,7 @@ final class LongBufferRecorderTests: XCTestCase {
         let gate = ExportGate()
         let observation = ExportObservation()
         let attempts = ExportAttemptTracker()
-        let recorder = makeFileBackedRecorder { segments, _, outputDirectory, _, _, _ in
+        let recorder = makeFileBackedRecorder { segments, _, outputDirectory, _, _ in
             await observation.record(segments.map(\.url))
             if await attempts.next() == 1 {
                 await gate.pauseExporter()
@@ -317,7 +317,7 @@ final class LongBufferRecorderTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: outputDirectory) }
 
         let signal = StartSignal()
-        let recorder = makeFileBackedRecorder { _, _, _, _, _, _ in
+        let recorder = makeFileBackedRecorder { _, _, _, _, _ in
             await signal.markStarted()
             try await Task.sleep(for: .seconds(60))
             throw TestError.simulatedExportFailure
@@ -360,41 +360,6 @@ final class LongBufferRecorderTests: XCTestCase {
         )
     }
 
-    func testSessionStorageUsesSeparateDirectoryAndKeepsFullDuration() async throws {
-        let outputDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: outputDirectory) }
-
-        let recorder = makeFileBackedRecorder { segments, lastSeconds, outputDirectory, _, _, suffix in
-            XCTAssertEqual(suffix, "Session")
-            XCTAssertGreaterThanOrEqual(lastSeconds, 100)
-            XCTAssertFalse(segments.isEmpty)
-            let url = outputDirectory.appendingPathComponent("session-out.mp4")
-            try Data("session".utf8).write(to: url)
-            return url
-        }
-
-        await recorder.configure(
-            enabled: true,
-            maxDurationSeconds: .infinity,
-            outputDirectory: outputDirectory,
-            storage: .session
-        )
-
-        let early = try makeVideoSample(pts: 1)
-        let late = try makeVideoSample(pts: 120)
-        await recorder.appendVideo(early)
-        await recorder.appendVideo(late)
-
-        let saved = try await recorder.saveEntireRecording(outputDirectory: outputDirectory)
-        XCTAssertEqual(saved.lastPathComponent, "session-out.mp4")
-
-        let sessionDir = outputDirectory.appendingPathComponent(".ReplayCapSession", isDirectory: true)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: sessionDir.path))
-        let longBufferDir = outputDirectory.appendingPathComponent(".ReplayCapLongBuffer", isDirectory: true)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: longBufferDir.path))
-    }
-
     func testConfigureRemovesOnlyOrphanedLegacyReplayMacSegments() async throws {
         let outputDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -411,7 +376,7 @@ final class LongBufferRecorderTests: XCTestCase {
         try Data("user file".utf8).write(to: unrelated)
         try FileManager.default.createDirectory(at: similarlyNamedDirectory, withIntermediateDirectories: true)
 
-        let recorder = makeFileBackedRecorder { _, _, outputDirectory, _, _, _ in
+        let recorder = makeFileBackedRecorder { _, _, outputDirectory, _, _ in
             outputDirectory.appendingPathComponent("unused.mp4")
         }
         await recorder.configure(

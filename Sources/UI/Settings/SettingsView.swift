@@ -37,6 +37,8 @@ public struct SettingsView: View {
     @Default(.perAppAudioBundleID) var perAppAudioBundleID
     @Default(.systemAudioVolume) var systemAudioVolume
     @Default(.microphoneVolume) var microphoneVolume
+    @Default(.sessionRecordingSystemAudio) var sessionRecordingSystemAudio
+    @Default(.sessionRecordingMicrophone) var sessionRecordingMicrophone
 
     @Default(.memoryCapMB) var memoryCapMB
     @Default(.queueDepth) var queueDepth

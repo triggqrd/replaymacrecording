@@ -155,6 +155,15 @@ extension AppDelegate {
     }
 
     func applyPipelineShapeChanges() async throws {
+        // Restarting the video encoder here yields a new format description that
+        // the recording's fixed-format writer can't accept, so end any active
+        // screen recording first (the user is notified and the clip so far saved).
+        // This is the one reshape path that bypasses stopCapturePipelineAsync.
+        // If that recording owned the pipeline (replay was idle), finalize stops it
+        // rather than leaving it running with no owner — so bail out of the reshape.
+        await finalizeSessionRecordingIfActive(reason: .captureSettingsChanged, mayStopPipeline: true)
+        guard isCaptureRunning else { return }
+
         let codec: Encode.VideoCodec = AppSettings.videoCodec == "hevc" ? .hevc : .h264
         let bitrate = Int(AppSettings.bitrateMbps * 1_000_000)
         let fps = AppSettings.frameRate
@@ -297,7 +306,10 @@ extension AppDelegate {
     }
 
     func applyMicSettingIfNeeded() async {
-        let shouldCaptureMic = AppSettings.captureMicrophone
+        // Union of replay-buffer and active-recording mic needs, so a replay
+        // mic-off toggle doesn't kill a recording that wants the mic (and vice
+        // versa). lastMicEnabled/lastMicDeviceID then track the union state.
+        let shouldCaptureMic = desiredMicEnabled
         let selectedMicDeviceID = AppSettings.microphoneID
         let micSettingsChanged = shouldCaptureMic != lastMicEnabled || selectedMicDeviceID != lastMicDeviceID
         guard micSettingsChanged else { return }

@@ -37,14 +37,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         micRingBuffer: micAudioRingBuffer
     )
     let longBufferRecorder = LongBufferRecorder()
-    let sessionRecorder = LongBufferRecorder()
-    lazy var longBufferAppendPump = LongBufferAppendPump(
-        recorders: [longBufferRecorder, sessionRecorder]
-    )
-    /// True while a start→stop session recording is actively writing to disk.
-    var isSessionRecording = false
-    var isSessionFinalizeInProgress = false
-    var isTerminatingAfterSessionSave = false
+    lazy var longBufferAppendPump = LongBufferAppendPump(recorder: longBufferRecorder)
+
+    // Continuous "Screen Recording" — writes one MP4 by tapping the same encoded
+    // video stream and raw PCM audio the replay buffer uses, so it inherits every
+    // Video-section setting at no extra encode cost.
+    let sessionRecorder = SessionRecorder()
+    lazy var sessionAppendPump = SessionAppendPump(recorder: sessionRecorder)
 
     let menuBarState = MenuBarState()
     let statusItemController = StatusItemController()
@@ -55,6 +54,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     /// is running. Ensures the game watcher only stops recordings it started,
     /// never a manual one.
     var recordingAutoStartedByGame = false
+
+    // MARK: - Screen recording state
+
+    /// True from the moment a screen recording begins until it fully stops.
+    /// Drives the capture union (`desiredSystemAudioForSCK`/`desiredMicEnabled`)
+    /// and the menu indicator. Distinct from `sessionAppendPump.isActive`, which
+    /// turns on only once samples are flowing — so a one-time pipeline restart at
+    /// recording start (to add system audio) doesn't trip the stop-on-reconfigure
+    /// finalize.
+    var isSessionRecordingActive = false
+    /// True while the capture pipeline was started solely to serve a screen
+    /// recording (replay buffer was idle). Ensures stopping the recording also
+    /// stops the pipeline it started — but never one replay or a game owns.
+    var captureAutoStartedBySessionRecording = false
+    var sessionWantsSystemAudio = false
+    var sessionWantsMicrophone = false
+    var sessionRecordingStartedAt: Date?
+    /// Serializes user start/stop so they can never interleave across awaits.
+    var sessionRecordingOpTask: Task<Void, Never>?
+    /// Guards against overlapping finalize (user stop, low-disk, pipeline teardown).
+    var isSessionFinalizeInProgress = false
+    /// True while termination is being delayed to finalize an in-progress recording.
+    var isTerminatingAfterSessionSave = false
 
     var isCaptureRunning = false
     var isWorkspaceSessionActive = true
@@ -142,9 +164,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         statusItemController.onSaveLongBuffer = { [weak self] in
             self?.saveLongBufferFromUI()
         }
-        statusItemController.onToggleSessionRecording = { [weak self] in
-            self?.toggleSessionRecording()
-        }
         statusItemController.onToggleRecording = { [weak self] in
             self?.toggleCapturePipeline()
         }
@@ -153,6 +172,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         }
         statusItemController.onOpenSettings = { [weak self] in
             self?.openSettingsWindow()
+        }
+        statusItemController.onToggleScreenRecording = { [weak self] in
+            self?.toggleScreenRecording()
         }
         statusItemController.setup(state: menuBarState)
         checkForAvailableUpdate()
@@ -208,24 +230,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         monitoringTask?.cancel()
         settingsReconcileTask?.cancel()
         captureRecoveryTask?.cancel()
-        if !isTerminatingAfterSessionSave {
-            stopCapturePipeline()
-        }
+        stopCapturePipeline()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // Finish an in-progress session recording before quitting so the file
-        // is not left as orphaned temp segments.
-        guard isSessionRecording || isSessionFinalizeInProgress else {
-            return .terminateNow
-        }
-        if isTerminatingAfterSessionSave {
+        // Delay termination just long enough to finalize an in-progress recording
+        // so the file is saved cleanly (not left as fragments).
+        guard isSessionRecordingActive, !isTerminatingAfterSessionSave else {
             return .terminateNow
         }
         isTerminatingAfterSessionSave = true
         Task { @MainActor in
-            await stopSessionRecording(userInitiated: false)
-            await stopCapturePipelineAsync()
+            await finalizeSessionRecordingForTermination()
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

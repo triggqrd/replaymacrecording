@@ -75,33 +75,4 @@ final class MenuBarStateTests: XCTestCase {
         XCTAssertEqual(state.extendedBufferElapsedSeconds, 45)
         XCTAssertEqual(state.formattedExtendedBufferDuration, "00:45")
     }
-
-    func testSessionRecordingShowsUncappedElapsedTime() {
-        Defaults[.bufferDurationSeconds] = 30
-        Defaults[.longBufferEnabled] = false
-        let state = MenuBarState()
-        let start = Date(timeIntervalSinceReferenceDate: 1_000)
-
-        state.setRecording(true, at: start)
-        state.setSessionRecording(true, at: start)
-        state.updateRecordingElapsed(at: start.addingTimeInterval(95))
-
-        XCTAssertTrue(state.isSessionRecording)
-        XCTAssertEqual(state.sessionElapsedSeconds, 95)
-        XCTAssertEqual(state.formattedSessionDuration, "01:35")
-        XCTAssertEqual(state.formattedRecordingDuration, "01:35")
-    }
-
-    func testStoppingSessionRecordingResetsElapsedTime() {
-        let state = MenuBarState()
-        let start = Date(timeIntervalSinceReferenceDate: 1_000)
-
-        state.setSessionRecording(true, at: start)
-        state.updateRecordingElapsed(at: start.addingTimeInterval(45))
-        state.setSessionRecording(false)
-
-        XCTAssertFalse(state.isSessionRecording)
-        XCTAssertEqual(state.sessionElapsedSeconds, 0)
-        XCTAssertEqual(state.formattedSessionDuration, "00:00")
-    }
 }

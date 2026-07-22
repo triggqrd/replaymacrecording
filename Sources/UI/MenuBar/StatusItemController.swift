@@ -10,13 +10,13 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
     private var state = MenuBarState()
     private var saveItem: NSMenuItem?
     private var saveLongBufferItem: NSMenuItem?
-    private var toggleSessionRecordingItem: NSMenuItem?
     private var toggleRecordingItem: NSMenuItem?
+    private var screenRecordingItem: NSMenuItem?
+    private var screenRecordingDurationItem: NSMenuItem?
     private var libraryItem: NSMenuItem?
     private var revealLastClipItem: NSMenuItem?
     private var openLastClipItem: NSMenuItem?
     private var recordingDurationItem: NSMenuItem?
-    private var sessionDurationItem: NSMenuItem?
     private var bufferUsageItem: NSMenuItem?
     private var longBufferUsageItem: NSMenuItem?
     private var hotkeyHintItem: NSMenuItem?
@@ -26,8 +26,8 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
     public var onSaveClip: (() -> Void)?
     public var onSaveLongBuffer: (() -> Void)?
-    public var onToggleSessionRecording: (() -> Void)?
     public var onToggleRecording: (() -> Void)?
+    public var onToggleScreenRecording: (() -> Void)?
     public var onOpenClipLibrary: (() -> Void)?
     public var onOpenSettings: (() -> Void)?
     public var onQuit: (() -> Void)?
@@ -98,10 +98,6 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         saveLongBufferItem.target = self
         menu.addItem(saveLongBufferItem)
 
-        let toggleSessionRecordingItem = NSMenuItem(title: "", action: #selector(toggleSessionRecording), keyEquivalent: "")
-        toggleSessionRecordingItem.target = self
-        menu.addItem(toggleSessionRecordingItem)
-
         let hotkeyHintItem = NSMenuItem(title: "No hotkey set — configure in Settings", action: nil, keyEquivalent: "")
         hotkeyHintItem.isEnabled = false
         menu.addItem(hotkeyHintItem)
@@ -109,6 +105,10 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         let toggleRecordingItem = NSMenuItem(title: "", action: #selector(toggleRecording), keyEquivalent: "")
         toggleRecordingItem.target = self
         menu.addItem(toggleRecordingItem)
+
+        let screenRecordingItem = NSMenuItem(title: "", action: #selector(toggleScreenRecording), keyEquivalent: "")
+        screenRecordingItem.target = self
+        menu.addItem(screenRecordingItem)
 
         let libraryItem = NSMenuItem(title: "Clip Library", action: #selector(openClipLibrary), keyEquivalent: "")
         libraryItem.target = self
@@ -126,9 +126,9 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         recordingDurationItem.isEnabled = false
         menu.addItem(recordingDurationItem)
 
-        let sessionDurationItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        sessionDurationItem.isEnabled = false
-        menu.addItem(sessionDurationItem)
+        let screenRecordingDurationItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        screenRecordingDurationItem.isEnabled = false
+        menu.addItem(screenRecordingDurationItem)
 
         let bufferUsageItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         bufferUsageItem.isEnabled = false
@@ -155,13 +155,13 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
         self.saveItem = saveItem
         self.saveLongBufferItem = saveLongBufferItem
-        self.toggleSessionRecordingItem = toggleSessionRecordingItem
         self.toggleRecordingItem = toggleRecordingItem
+        self.screenRecordingItem = screenRecordingItem
+        self.screenRecordingDurationItem = screenRecordingDurationItem
         self.libraryItem = libraryItem
         self.openLastClipItem = openLastClipItem
         self.revealLastClipItem = revealLastClipItem
         self.recordingDurationItem = recordingDurationItem
-        self.sessionDurationItem = sessionDurationItem
         self.bufferUsageItem = bufferUsageItem
         self.longBufferUsageItem = longBufferUsageItem
         self.hotkeyHintItem = hotkeyHintItem
@@ -191,12 +191,14 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
             saveInProgress: state.isSaveInProgress
         )
 
-        toggleSessionRecordingItem?.title = state.isSessionRecording
-            ? "Stop & Save Session"
-            : "Start Session Recording"
-        toggleSessionRecordingItem?.isEnabled = !state.isSaveInProgress
-
         toggleRecordingItem?.title = state.isRecording ? "Stop Recording" : "Start Recording"
+
+        screenRecordingItem?.title = state.isSessionRecording ? "Stop Screen Recording" : "Start Screen Recording"
+        // No single composite stream in separate-files dual mode, so recording is
+        // unavailable there (mirrors the long buffer).
+        screenRecordingItem?.isHidden = isSeparateDualSaveMode && !state.isSessionRecording
+        screenRecordingDurationItem?.title = "Screen recording: \(state.formattedSessionRecordingDuration)"
+        screenRecordingDurationItem?.isHidden = !state.isSessionRecording
 
         libraryItem?.title = "Clip Library"
 
@@ -210,9 +212,6 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
 
         recordingDurationItem?.title = "Recording: \(state.formattedRecordingDuration)"
         recordingDurationItem?.isHidden = !state.isRecording
-
-        sessionDurationItem?.title = "Session: \(state.formattedSessionDuration)"
-        sessionDurationItem?.isHidden = !state.isSessionRecording
 
         let quickReplayCap = TimeInterval(replaySeconds)
         let capLabel = MenuBarState.formattedDuration(quickReplayCap)
@@ -251,9 +250,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
     private func updateTooltip() {
         guard let button = statusItem?.button else { return }
 
-        if state.isSessionRecording {
-            button.toolTip = "\(AppBranding.name) — Session \(state.formattedSessionDuration) (stop to save)"
-        } else if state.isRecording {
+        if state.isRecording {
             if AppSettings.longBufferEnabled {
                 let longReplayCap = TimeInterval(AppSettings.longBufferDurationSeconds)
                 let available = min(state.extendedBufferElapsedSeconds, longReplayCap)
@@ -281,12 +278,17 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
         onSaveLongBuffer?()
     }
 
-    @objc private func toggleSessionRecording() {
-        onToggleSessionRecording?()
-    }
-
     @objc private func toggleRecording() {
         onToggleRecording?()
+    }
+
+    @objc private func toggleScreenRecording() {
+        onToggleScreenRecording?()
+    }
+
+    private var isSeparateDualSaveMode: Bool {
+        AppSettings.captureMode == CaptureMode.dualSideBySide.rawValue
+            && AppSettings.dualCaptureSaveMode == DualCaptureSaveMode.separateFiles.rawValue
     }
 
     @objc private func openSettings() {
@@ -347,7 +349,6 @@ public final class StatusItemController: NSObject, NSMenuDelegate, @unchecked Se
             || KeyboardShortcuts.getShortcut(for: .saveLast15Seconds) != nil
             || KeyboardShortcuts.getShortcut(for: .saveLast60Seconds) != nil
             || KeyboardShortcuts.getShortcut(for: .saveLongBuffer) != nil
-            || KeyboardShortcuts.getShortcut(for: .toggleSessionRecording) != nil
     }
 }
 
@@ -376,11 +377,14 @@ private struct StatusBadgeView: View {
                     .foregroundStyle(AppTheme.danger)
             case .idle:
                 if state.isSessionRecording {
-                    Circle()
+                    // Same footprint as the replay indicator so it can't overflow
+                    // the menu bar differently — a filled red square (vs the
+                    // replay dot) marks a full screen recording.
+                    RoundedRectangle(cornerRadius: 2)
                         .fill(AppTheme.danger)
-                        .frame(width: 8, height: 8)
+                        .frame(width: 9, height: 9)
                         .frame(width: 12, height: 12)
-                    Text("S \(state.formattedSessionDuration)")
+                    Text(state.formattedSessionRecordingDuration)
                         .foregroundStyle(AppTheme.textPrimary)
                 } else if state.isRecording {
                     Circle()
@@ -424,7 +428,7 @@ private struct StatusBadgeView: View {
         case .saving:
             return AppTheme.accent.opacity(0.12)
         case .idle:
-            if state.isSessionRecording || state.isRecording {
+            if state.isRecording {
                 return AppTheme.danger.opacity(0.12)
             }
             return AppTheme.accent.opacity(0.10)

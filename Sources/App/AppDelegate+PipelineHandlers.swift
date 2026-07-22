@@ -25,9 +25,14 @@ func replayCapSecondaryFrameCompositorHandler(_ frameCompositor: FrameCompositor
     }
 }
 
-func replayCapSystemAudioProcessHandler(_ systemAudioCapture: SystemAudioCapture) -> @Sendable (CMSampleBuffer) -> Void {
+func replayCapSystemAudioProcessHandler(
+    _ systemAudioCapture: SystemAudioCapture,
+    sessionAppendPump: SessionAppendPump
+) -> @Sendable (CMSampleBuffer) -> Void {
     { sampleBuffer in
-        if AppSettings.captureSystemAudio {
+        // Process system audio if either the replay buffer or an active screen
+        // recording wants it. Per-consumer distribution is gated downstream.
+        if AppSettings.captureSystemAudio || sessionAppendPump.systemAudioWanted {
             systemAudioCapture.process(sampleBuffer: sampleBuffer)
         }
     }
@@ -41,11 +46,20 @@ func replayCapPerAppAudioHandler(_ systemAudioCapture: SystemAudioCapture) -> @S
 
 func replayCapPrimaryVideoOutputHandler(
     videoRingBuffer: VideoRingBuffer,
-    longBufferAppendPump: LongBufferAppendPump
+    longBufferAppendPump: LongBufferAppendPump,
+    sessionAppendPump: SessionAppendPump
 ) -> VideoEncoder.OutputHandler {
     { sampleBuffer in
         videoRingBuffer.append(encodedSample: sampleBuffer)
-        longBufferAppendPump.enqueueVideo(LongBufferSample(sampleBuffer))
+        // Wrap the encoded frame once, and only when a consumer actually wants it,
+        // so an idle long buffer / inactive recording adds no per-frame work.
+        let longWants = longBufferAppendPump.isEnabled
+        let sessionWants = sessionAppendPump.isActive
+        if longWants || sessionWants {
+            let sample = LongBufferSample(sampleBuffer)
+            if longWants { longBufferAppendPump.enqueueVideo(sample) }
+            if sessionWants { sessionAppendPump.enqueueVideo(sample) }
+        }
     }
 }
 
@@ -67,20 +81,45 @@ func replayCapAudioEncodeHandler(_ audioEncoder: AudioEncoder) -> @Sendable (CMS
 
 func replayCapSystemAudioOutputHandler(
     systemAudioRingBuffer: AudioRingBuffer,
-    longBufferAppendPump: LongBufferAppendPump
+    longBufferAppendPump: LongBufferAppendPump,
+    sessionAppendPump: SessionAppendPump
 ) -> AudioEncoder.OutputHandler {
     { sampleBuffer in
-        systemAudioRingBuffer.append(sampleBuffer)
-        longBufferAppendPump.enqueueSystemAudio(LongBufferSample(sampleBuffer))
+        // Feed the replay buffer only when the replay buffer itself wants system
+        // audio, so a recording that captures system audio (while replay doesn't)
+        // never leaks into replay clips. The session pump gates on its own toggle.
+        let replayWants = AppSettings.captureSystemAudio
+        if replayWants {
+            systemAudioRingBuffer.append(sampleBuffer)
+        }
+        let longWants = replayWants && longBufferAppendPump.isEnabled
+        let sessionWants = sessionAppendPump.systemAudioWanted
+        if longWants || sessionWants {
+            let sample = LongBufferSample(sampleBuffer)
+            if longWants { longBufferAppendPump.enqueueSystemAudio(sample) }
+            if sessionWants { sessionAppendPump.enqueueSystemAudio(sample) }
+        }
     }
 }
 
 func replayCapMicrophoneOutputHandler(
     micAudioRingBuffer: AudioRingBuffer,
-    longBufferAppendPump: LongBufferAppendPump
+    longBufferAppendPump: LongBufferAppendPump,
+    sessionAppendPump: SessionAppendPump
 ) -> AudioEncoder.OutputHandler {
     { sampleBuffer in
-        micAudioRingBuffer.append(sampleBuffer)
-        longBufferAppendPump.enqueueMicrophone(LongBufferSample(sampleBuffer))
+        // Mic hardware may be running only because the recording wants it; keep it
+        // out of replay clips unless the replay buffer's own mic toggle is on.
+        let replayWants = AppSettings.captureMicrophone
+        if replayWants {
+            micAudioRingBuffer.append(sampleBuffer)
+        }
+        let longWants = replayWants && longBufferAppendPump.isEnabled
+        let sessionWants = sessionAppendPump.microphoneWanted
+        if longWants || sessionWants {
+            let sample = LongBufferSample(sampleBuffer)
+            if longWants { longBufferAppendPump.enqueueMicrophone(sample) }
+            if sessionWants { sessionAppendPump.enqueueMicrophone(sample) }
+        }
     }
 }

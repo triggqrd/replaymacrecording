@@ -89,6 +89,14 @@ extension AppDelegate {
                     continue
                 }
 
+                // A screen recording is unbounded in length, so guard the disk:
+                // stop and finalize before it fills up.
+                if self.isSessionRecordingActive,
+                   let available = self.availableDiskCapacityBytes(),
+                   available < 500 * 1024 * 1024 {
+                    self.stopScreenRecording(reason: .lowDisk)
+                }
+
                 let videoMemory = self.videoRingBuffer.currentMemoryBytes
                 let dualDisplay1Memory = self.dualDisplay1VideoRingBuffer.currentMemoryBytes
                 let dualDisplay2Memory = self.dualDisplay2VideoRingBuffer.currentMemoryBytes

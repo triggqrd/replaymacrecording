@@ -29,50 +29,6 @@ public enum LongBufferRecorderError: LocalizedError, Equatable {
     }
 }
 
-/// On-disk layout for a continuous disk writer. Long buffer and session recording
-/// share the same writer implementation but must never share directories or file
-/// prefixes, or orphan cleanup from one mode would delete the other's segments.
-public struct LongBufferStorageConfig: Sendable, Equatable {
-    public let segmentDirectoryName: String
-    public let legacySegmentDirectoryName: String?
-    public let segmentFilePrefix: String
-    public let legacySegmentFilePrefix: String?
-    public let exportStagingDirectoryName: String
-    public let outputSuffix: String
-
-    public init(
-        segmentDirectoryName: String,
-        legacySegmentDirectoryName: String? = nil,
-        segmentFilePrefix: String,
-        legacySegmentFilePrefix: String? = nil,
-        exportStagingDirectoryName: String,
-        outputSuffix: String
-    ) {
-        self.segmentDirectoryName = segmentDirectoryName
-        self.legacySegmentDirectoryName = legacySegmentDirectoryName
-        self.segmentFilePrefix = segmentFilePrefix
-        self.legacySegmentFilePrefix = legacySegmentFilePrefix
-        self.exportStagingDirectoryName = exportStagingDirectoryName
-        self.outputSuffix = outputSuffix
-    }
-
-    public static let longBuffer = LongBufferStorageConfig(
-        segmentDirectoryName: ".ReplayCapLongBuffer",
-        legacySegmentDirectoryName: ".ReplayMacLongBuffer",
-        segmentFilePrefix: "ReplayCap_LongBuffer",
-        legacySegmentFilePrefix: "ReplayMac_LongBuffer",
-        exportStagingDirectoryName: ".ReplayCapLongBufferExports",
-        outputSuffix: "LongBuffer"
-    )
-
-    public static let session = LongBufferStorageConfig(
-        segmentDirectoryName: ".ReplayCapSession",
-        segmentFilePrefix: "ReplayCap_Session",
-        exportStagingDirectoryName: ".ReplayCapSessionExports",
-        outputSuffix: "Session"
-    )
-}
-
 public struct LongBufferSample: @unchecked Sendable {
     public let buffer: CMSampleBuffer
 
@@ -96,8 +52,7 @@ public actor LongBufferRecorder {
         TimeInterval,
         URL,
         Bool,
-        String?,
-        String
+        String?
     ) async throws -> URL
 
     private struct Segment: Sendable {
@@ -115,8 +70,6 @@ public actor LongBufferRecorder {
     private let segmentSeconds: Double = 60
     private var isEnabled = false
     private var maxDurationSeconds: Double = 300
-    private var storageConfig: LongBufferStorageConfig = .longBuffer
-    private var outputDirectory: URL?
     private var segmentDirectory: URL?
     private var segments: [Segment] = []
     private var latestVideoPTS: Double?
@@ -156,32 +109,17 @@ public actor LongBufferRecorder {
         self.clipExporter = clipExporter
     }
 
-    public func isRecordingEnabled() -> Bool {
-        isEnabled
-    }
-
-    /// Wall-clock span of retained media, including the in-progress segment.
-    public func recordedDurationSeconds() -> TimeInterval {
-        let ends = segments.map(\.endPTS) + (activeSegmentEndPTS.map { [$0] } ?? [])
-        let starts = segments.map(\.startPTS) + (activeSegmentStartPTS.map { [$0] } ?? [])
-        guard let newest = ends.max(), let oldest = starts.min() else {
-            return 0
-        }
-        return max(0, newest - oldest)
-    }
-
     public func configure(
         enabled: Bool,
         maxDurationSeconds: TimeInterval,
-        outputDirectory: URL,
-        storage: LongBufferStorageConfig = .longBuffer
+        outputDirectory: URL
     ) async {
         isEnabled = enabled
         self.maxDurationSeconds = maxDurationSeconds
-        self.storageConfig = storage
-        self.outputDirectory = outputDirectory
         let requestedSegmentDirectory = outputDirectory
-            .appendingPathComponent(storage.segmentDirectoryName, isDirectory: true)
+            .appendingPathComponent(".ReplayCapLongBuffer", isDirectory: true)
+        let legacySegmentDirectory = outputDirectory
+            .appendingPathComponent(".ReplayMacLongBuffer", isDirectory: true)
         segmentDirectory = requestedSegmentDirectory
         droppedVideoSamples = 0
         droppedSystemAudioSamples = 0
@@ -189,11 +127,7 @@ public actor LongBufferRecorder {
         latestVideoPTS = nil
 
         cleanupOrphanedSegmentsIfNeeded(in: requestedSegmentDirectory)
-        if let legacyName = storage.legacySegmentDirectoryName {
-            cleanupOrphanedSegmentsIfNeeded(
-                in: outputDirectory.appendingPathComponent(legacyName, isDirectory: true)
-            )
-        }
+        cleanupOrphanedSegmentsIfNeeded(in: legacySegmentDirectory)
 
         if !enabled {
             await stop(deleteSegments: true)
@@ -271,42 +205,6 @@ public actor LongBufferRecorder {
         mergeAudioTracks: Bool = true,
         baseName: String? = nil
     ) async throws -> URL {
-        try await saveClip(
-            lastSeconds: lastSeconds,
-            outputDirectory: outputDirectory,
-            mergeAudioTracks: mergeAudioTracks,
-            baseName: baseName,
-            outputSuffix: storageConfig.outputSuffix
-        )
-    }
-
-    /// Finishes the active segment and exports every retained segment (full session).
-    public func saveEntireRecording(
-        outputDirectory: URL,
-        mergeAudioTracks: Bool = true,
-        baseName: String? = nil
-    ) async throws -> URL {
-        try await finishCurrentSegment()
-        let duration = recordedDurationSeconds()
-        guard duration > 0 || !segments.isEmpty else {
-            throw LongBufferRecorderError.noSegments
-        }
-        return try await saveClip(
-            lastSeconds: max(duration + 1, 1),
-            outputDirectory: outputDirectory,
-            mergeAudioTracks: mergeAudioTracks,
-            baseName: baseName,
-            outputSuffix: storageConfig.outputSuffix
-        )
-    }
-
-    private func saveClip(
-        lastSeconds: TimeInterval,
-        outputDirectory: URL,
-        mergeAudioTracks: Bool,
-        baseName: String?,
-        outputSuffix: String
-    ) async throws -> URL {
         let exportID = UUID().uuidString
         guard !isExportInProgress else {
             logger.notice(
@@ -362,8 +260,7 @@ public actor LongBufferRecorder {
             let staged = try await Self.stageSegments(
                 selectedSegments,
                 outputDirectory: outputDirectory,
-                exportID: exportID,
-                stagingDirectoryName: storageConfig.exportStagingDirectoryName
+                exportID: exportID
             )
             stagingDirectory = staged.directory
             logger.info(
@@ -382,8 +279,7 @@ public actor LongBufferRecorder {
                 lastSeconds,
                 outputDirectory,
                 mergeAudioTracks,
-                baseName,
-                outputSuffix
+                baseName
             )
 
             await cleanupStagingDirectory(staged.directory, exportID: exportID)
@@ -410,8 +306,7 @@ public actor LongBufferRecorder {
         lastSeconds: TimeInterval,
         outputDirectory: URL,
         mergeAudioTracks: Bool,
-        baseName: String?,
-        outputSuffix: String
+        baseName: String?
     ) async throws -> URL {
         let newestPTS = segments.map(\.endPTS).max() ?? 0
         let cutoffPTS = newestPTS - lastSeconds
@@ -458,11 +353,7 @@ public actor LongBufferRecorder {
             cursor = CMTimeAdd(cursor, localDuration)
         }
 
-        let outputURL = try ClipMetadata.generateUniqueFileURL(
-            in: outputDirectory,
-            baseName: baseName,
-            suffix: outputSuffix
-        )
+        let outputURL = try ClipMetadata.generateUniqueFileURL(in: outputDirectory, baseName: baseName, suffix: "LongBuffer")
         let preset: String
         if mergeAudioTracks, compositionAudioTracks.count > 1 {
             preset = AVAssetExportPresetHighestQuality
@@ -495,11 +386,10 @@ public actor LongBufferRecorder {
     private static func stageSegments(
         _ segments: [Segment],
         outputDirectory: URL,
-        exportID: String,
-        stagingDirectoryName: String
+        exportID: String
     ) async throws -> StagedExport {
         let stagingRoot = outputDirectory
-            .appendingPathComponent(stagingDirectoryName, isDirectory: true)
+            .appendingPathComponent(".ReplayCapLongBufferExports", isDirectory: true)
         let stagingDirectory = stagingRoot.appendingPathComponent(exportID, isDirectory: true)
 
         return try await Task.detached(priority: .userInitiated) {
@@ -566,7 +456,7 @@ public actor LongBufferRecorder {
         guard let segmentDirectory else { return }
         try FileManager.default.createDirectory(at: segmentDirectory, withIntermediateDirectories: true)
 
-        let fileName = "\(storageConfig.segmentFilePrefix)_\(Int(Date().timeIntervalSince1970))_\(UUID().uuidString).mp4"
+        let fileName = "ReplayCap_LongBuffer_\(Int(Date().timeIntervalSince1970))_\(UUID().uuidString).mp4"
         let url = segmentDirectory.appendingPathComponent(fileName)
         var installedWriter = false
         defer {
@@ -801,9 +691,6 @@ public actor LongBufferRecorder {
     }
 
     private func pruneSegments(keepingNewestPTS newestPTS: Double) {
-        guard maxDurationSeconds.isFinite, maxDurationSeconds > 0 else {
-            return
-        }
         let cutoff = newestPTS - maxDurationSeconds
         let expired = segments.filter { $0.endPTS < cutoff }
         segments.removeAll { $0.endPTS < cutoff }
@@ -917,13 +804,9 @@ public actor LongBufferRecorder {
     }
 
     private func isReplayCapSegmentFile(_ url: URL) -> Bool {
-        guard url.pathExtension.lowercased() == "mp4" else {
-            return false
-        }
-        let name = url.lastPathComponent
-        let matchesPrimary = name.hasPrefix(storageConfig.segmentFilePrefix + "_")
-        let matchesLegacy = storageConfig.legacySegmentFilePrefix.map { name.hasPrefix($0 + "_") } ?? false
-        guard matchesPrimary || matchesLegacy else {
+        guard url.pathExtension.lowercased() == "mp4",
+              url.lastPathComponent.hasPrefix("ReplayCap_LongBuffer_")
+                || url.lastPathComponent.hasPrefix("ReplayMac_LongBuffer_") else {
             return false
         }
         return (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true

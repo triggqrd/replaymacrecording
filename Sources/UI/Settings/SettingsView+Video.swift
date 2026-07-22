@@ -148,14 +148,14 @@ extension SettingsView {
             }
 
             Section {
-                Label(
-                    "Session recording is always available from the menu bar (Start Session Recording) or a hotkey in Settings → Hotkeys. It records until you stop, then saves one MP4 with screen, system audio, and microphone — no rolling buffer cutoff.",
-                    systemImage: "record.circle"
-                )
-                .foregroundStyle(AppTheme.textSecondary)
-                .font(.system(size: 12, design: .rounded))
+                Toggle("Record system audio", isOn: $sessionRecordingSystemAudio)
+                Toggle("Record microphone", isOn: $sessionRecordingMicrophone)
+
+                Label("Screen recording saves a whole session to one file, using the video settings above. Its audio is independent of the replay buffer. Changing capture or encoding settings while recording stops it — the clip up to that point is saved.", systemImage: "record.circle")
+                    .foregroundStyle(AppTheme.textSecondary)
+                    .font(.system(size: 12, design: .rounded))
             } header: {
-                sectionHeader(icon: "record.circle", title: "Session Recording")
+                sectionHeader(icon: "record.circle", title: "Screen Recording")
             }
         }
         .formStyle(.grouped)

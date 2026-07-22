@@ -217,7 +217,7 @@ extension AppDelegate {
         return app.localizedName
     }
 
-    private func availableDiskCapacityBytes() -> Int64? {
+    func availableDiskCapacityBytes() -> Int64? {
         // Probe the output directory if it exists, otherwise the home directory
         // (same volume), since the output folder is created lazily on first save.
         let outputURL = AppSettings.outputDirectoryURL

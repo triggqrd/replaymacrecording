@@ -43,6 +43,7 @@ public final class VideoEncoder: @unchecked Sendable {
     private var _currentConfiguration: VideoEncoderConfiguration?
     private var expectedPTSQueue: [CMTime] = []
     private var encodeCount: Int64 = 0
+    private var _forceKeyframeNextFrame = false
 
     public var outputHandler: OutputHandler? {
         get {
@@ -126,7 +127,17 @@ public final class VideoEncoder: @unchecked Sendable {
             kVTCompressionPropertyKey_DataRateLimits: [
                 NSNumber(value: bytesPerSecond * 1.5),
                 NSNumber(value: 1.0)
-            ] as NSArray
+            ] as NSArray,
+            // Tag the encoded stream BT.709 (sRGB primaries) so the MP4 carries an
+            // explicit `colr` atom. Without this the color info is left ambiguous
+            // and players apply a mismatched matrix/range, which shows up as
+            // washed-out/desaturated clips. The capture side is pinned to sRGB
+            // (CaptureManager.screenColorSpaceName) so the pixel data matches these
+            // tags. Applies to both HEVC and H.264, and to every consumer of the
+            // encoded stream (replay buffer clips and the screen recorder alike).
+            kVTCompressionPropertyKey_ColorPrimaries: kCMFormatDescriptionColorPrimaries_ITU_R_709_2,
+            kVTCompressionPropertyKey_TransferFunction: kCMFormatDescriptionTransferFunction_ITU_R_709_2,
+            kVTCompressionPropertyKey_YCbCrMatrix: kCMFormatDescriptionYCbCrMatrix_ITU_R_709_2
         ]
 
         let propsStatus = VTSessionSetProperties(session, propertyDictionary: properties as CFDictionary)
@@ -153,9 +164,19 @@ public final class VideoEncoder: @unchecked Sendable {
         stateLock.unlock()
     }
 
+    /// Requests that the next encoded frame be a keyframe (IDR). Used when a
+    /// screen recording starts so its file can open on a decodable frame instead
+    /// of a mid-GOP P-frame (which renders black until the next keyframe).
+    public func forceNextKeyframe() {
+        stateLock.lock()
+        _forceKeyframeNextFrame = true
+        stateLock.unlock()
+    }
+
     public func encode(sampleBuffer: CMSampleBuffer) {
         stateLock.lock()
         let session = compressionSession
+        let forceKeyframe = _forceKeyframeNextFrame
         stateLock.unlock()
 
         guard let session else { return }
@@ -169,12 +190,16 @@ public final class VideoEncoder: @unchecked Sendable {
         encodeCount += 1
         stateLock.unlock()
 
+        let frameProperties: CFDictionary? = forceKeyframe
+            ? [kVTEncodeFrameOptionKey_ForceKeyFrame: kCFBooleanTrue] as CFDictionary
+            : nil
+
         let status = VTCompressionSessionEncodeFrame(
             session,
             imageBuffer: pixelBuffer,
             presentationTimeStamp: pts,
             duration: duration,
-            frameProperties: nil,
+            frameProperties: frameProperties,
             sourceFrameRefcon: nil,
             infoFlagsOut: nil
         )
@@ -184,6 +209,12 @@ public final class VideoEncoder: @unchecked Sendable {
             _ = expectedPTSQueue.popLast()
             stateLock.unlock()
             print("Encoder: VTCompressionSessionEncodeFrame failed with status \(status)")
+        } else if forceKeyframe {
+            // Consume the one-shot keyframe request only once the frame was
+            // actually submitted, so a dropped/failed frame doesn't lose it.
+            stateLock.lock()
+            _forceKeyframeNextFrame = false
+            stateLock.unlock()
         }
     }
 

@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Add session recording: start→stop capture that writes continuously and saves one MP4 (screen + system audio + mic) when stopped — available from the menu bar and a new hotkey, independent of the instant-replay buffer
+- Add session recording: a start→stop screen recorder that taps the already-encoded capture stream (no re-encode) and writes one continuous MP4, saved when you stop — from the menu bar or a new hotkey, running alongside the instant-replay buffer. Independent "record system audio" and "record microphone" toggles (any combination) that don't affect replay clips; matches every Video-section setting (display, capture mode, resolution/Retina, frame rate, bitrate, codec, quality preset); opens on a keyframe so there's no black lead-in; and finalizes an in-progress recording on quit
+- Fix desaturated saved clips: tag the capture and encoded stream as sRGB / BT.709 (full range) end to end so players apply the right color matrix — corrects both instant-replay clips and session recordings
+- Skip per-frame background work for the extended replay buffer when it's disabled (the default), removing continuous idle task churn from the capture hot path
 - Publish the Mac App Store edition as ReplayCap after App Review rejected "Mac" in the app name (Guideline 5.2.5); the direct/GitHub build keeps the ReplayMac name via a launch-time branding constant shared across both builds
 - Share on-disk metadata and long-buffer names between both editions (`.ReplayCapClipLibrary.json`, `.ReplayCapLongBuffer`), migrating existing `.ReplayMac…` files automatically
 - Notarize the direct-download build: release DMGs are signed with a Developer ID certificate, hardened runtime, and a stapled notarization ticket, so the app opens without Gatekeeper workarounds

@@ -17,7 +17,8 @@ extension AppDelegate {
     func configurePipelines() {
         videoEncoder.outputHandler = replayCapPrimaryVideoOutputHandler(
             videoRingBuffer: videoRingBuffer,
-            longBufferAppendPump: longBufferAppendPump
+            longBufferAppendPump: longBufferAppendPump,
+            sessionAppendPump: sessionAppendPump
         )
         dualDisplay1VideoEncoder.outputHandler = replayCapDualVideoOutputHandler(dualDisplay1VideoRingBuffer)
         dualDisplay2VideoEncoder.outputHandler = replayCapDualVideoOutputHandler(dualDisplay2VideoRingBuffer)
@@ -26,14 +27,16 @@ extension AppDelegate {
 
         systemAudioEncoder.outputHandler = replayCapSystemAudioOutputHandler(
             systemAudioRingBuffer: systemAudioRingBuffer,
-            longBufferAppendPump: longBufferAppendPump
+            longBufferAppendPump: longBufferAppendPump,
+            sessionAppendPump: sessionAppendPump
         )
         systemAudioCapture.setHandler(replayCapAudioEncodeHandler(systemAudioEncoder))
         perAppAudioCapture.setHandler(replayCapPerAppAudioHandler(systemAudioCapture))
 
         micAudioEncoder.outputHandler = replayCapMicrophoneOutputHandler(
             micAudioRingBuffer: micAudioRingBuffer,
-            longBufferAppendPump: longBufferAppendPump
+            longBufferAppendPump: longBufferAppendPump,
+            sessionAppendPump: sessionAppendPump
         )
         micAudioCapture.setHandler(replayCapAudioEncodeHandler(micAudioEncoder))
     }
@@ -67,9 +70,13 @@ extension AppDelegate {
             micAudioRingBuffer.clear()
             AudioLevelMonitor.shared.reset()
             longBufferAppendPump.reset()
+            sessionAppendPump.reset()
             await configureLongBufferForCurrentSettings()
 
-                let shouldCaptureMic = AppSettings.captureMicrophone
+                // Capture the union of what the replay buffer and an active screen
+                // recording need. Mic is an independent device path (added live);
+                // system audio comes up with the SCK stream here.
+                let shouldCaptureMic = desiredMicEnabled
                 let micPermissionGranted = shouldCaptureMic ? await requestMicrophonePermissionIfNeeded() : false
                 if shouldCaptureMic && !micPermissionGranted {
                     notifyMicPermissionDeniedIfNeeded()
@@ -81,8 +88,11 @@ extension AppDelegate {
                 let fps = AppSettings.frameRate
                 let queueDepth = AppSettings.queueDepth
                 let excludeOwn = AppSettings.excludeOwnAppAudio
-                var captureSystemAudioForSession = AppSettings.captureSystemAudio
-                var usePerAppAudio = captureSystemAudioForSession
+                var captureSystemAudioForSession = desiredSystemAudioForSCK
+                // Per-app audio is a replay-buffer feature: only use it when the
+                // replay buffer wants system audio. A recording that needs system
+                // audio while replay's is off gets the all-apps stream instead.
+                var usePerAppAudio = AppSettings.captureSystemAudio
                     && AppSettings.perAppAudioEnabled
                     && !AppSettings.perAppAudioBundleID.isEmpty
 
@@ -106,7 +116,7 @@ extension AppDelegate {
             if isDual {
                     let dualSaveMode = AppSettings.dualCaptureSaveModeEnum
                     await configureDualVideoHandlers(saveMode: dualSaveMode)
-                    await captureManager.setAudioHandler1(replayCapSystemAudioProcessHandler(systemAudioCapture))
+                    await captureManager.setAudioHandler1(replayCapSystemAudioProcessHandler(systemAudioCapture, sessionAppendPump: sessionAppendPump))
 
                     let captureDisplayID1 = AppSettings.captureDisplayID.isEmpty ? nil : AppSettings.captureDisplayID
                     let captureDisplayID2 = AppSettings.captureDisplayID2.isEmpty ? nil : AppSettings.captureDisplayID2
@@ -272,6 +282,7 @@ extension AppDelegate {
         await captureManager.stop()
         await perAppAudioCapture.stop()
         longBufferAppendPump.reset()
+        sessionAppendPump.reset()
         await longBufferRecorder.stop(deleteSegments: false)
         micAudioCapture.stop()
         videoEncoder.stop()
@@ -293,7 +304,7 @@ extension AppDelegate {
         captureAudio: Bool
     ) async throws {
         await captureManager.setVideoHandler(replayCapVideoEncodeHandler(videoEncoder))
-        await captureManager.setAudioHandler(replayCapSystemAudioProcessHandler(systemAudioCapture))
+        await captureManager.setAudioHandler(replayCapSystemAudioProcessHandler(systemAudioCapture, sessionAppendPump: sessionAppendPump))
 
         let config = try await captureManager.start(
             interactivePermissionPrompt: userInitiated,
@@ -353,30 +364,20 @@ extension AppDelegate {
             captureRecoveryTask = nil
         }
         guard isCaptureRunning else {
-            if isSessionRecording {
-                await stopSessionRecording(userInitiated: false)
-            }
             return
         }
 
+        // A screen recording taps the live encoded stream, so it can't outlive the
+        // pipeline. Finalize it (saving what was captured) before tearing down.
+        await finalizeSessionRecordingIfActive(reason: .pipelineStopped)
+
         monitoringTask?.cancel()
         monitoringTask = nil
-
-        // Finalize session to a real file before tearing capture down. On a
-        // recoverable interruption we discard instead so resume starts clean.
-        if isSessionRecording {
-            if preserveResumeIntent {
-                await discardSessionRecording()
-            } else {
-                await stopSessionRecording(userInitiated: false)
-            }
-        }
 
         await captureManager.stop()
         await perAppAudioCapture.stop()
         longBufferAppendPump.reset()
         await longBufferRecorder.stop(deleteSegments: !preserveResumeIntent)
-        await sessionRecorder.stop(deleteSegments: true)
         micAudioCapture.stop()
         videoEncoder.stop()
         dualDisplay1VideoEncoder.stop()
@@ -387,9 +388,9 @@ extension AppDelegate {
         AudioLevelMonitor.shared.reset()
 
         isCaptureRunning = false
+        captureAutoStartedBySessionRecording = false
         menuBarState.setRecording(false)
         menuBarState.setExtendedBufferRecording(false)
-        menuBarState.setSessionRecording(false)
         menuBarState.setBufferedSeconds(0)
         statusItemController.refreshPresentation()
     }
@@ -398,6 +399,7 @@ extension AppDelegate {
         let separateDualSave = AppSettings.captureMode == CaptureMode.dualSideBySide.rawValue
             && AppSettings.dualCaptureSaveMode == DualCaptureSaveMode.separateFiles.rawValue
         let enabled = AppSettings.longBufferEnabled && !separateDualSave
+        longBufferAppendPump.setEnabled(enabled)
         await longBufferRecorder.configure(
             enabled: enabled,
             maxDurationSeconds: TimeInterval(AppSettings.longBufferDurationSeconds),
@@ -411,21 +413,13 @@ extension AppDelegate {
                 body: "Extended replay is not available while dual display clips are saved as separate files."
             )
         }
-
-        // Session recording uses the primary/composited stream only.
-        if isSessionRecording && separateDualSave {
-            NotificationManager.shared.showOperationalNotification(
-                title: "Session Recording Stopped",
-                body: "Session recording can’t continue while dual display clips are saved as separate files. Saving what was captured…"
-            )
-            await stopSessionRecording(userInitiated: false)
-        }
     }
 
     func toggleCapturePipeline() {
         // A manual start or stop hands recording control back to the user, so
         // the game watcher must no longer treat this session as one it owns.
         recordingAutoStartedByGame = false
+        captureAutoStartedBySessionRecording = false
         if isCaptureRunning {
             Task { await stopCapturePipelineAsync() }
         } else {

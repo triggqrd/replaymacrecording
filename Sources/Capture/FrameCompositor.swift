@@ -26,7 +26,11 @@ public final class FrameCompositor: @unchecked Sendable {
     private var pixelBufferPool: CVPixelBufferPool?
     private var _outputHandler: OutputHandler?
     private let ciContext = CIContext(options: [.cacheIntermediates: false])
-    private let colorSpace = CGColorSpaceCreateDeviceRGB()
+    // Use an explicit sRGB working space (not generic device RGB) so the
+    // CoreImage YCbCr→RGB→YCbCr round-trip stays colorimetrically consistent
+    // with the sRGB/BT.709 tags the capture and encoder now apply. Prevents the
+    // dual side-by-side composite from drifting color vs single-display capture.
+    private let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
 
     private var primaryTimeoutCounter = 0
     private var secondaryTimeoutCounter = 0
@@ -140,10 +144,14 @@ public final class FrameCompositor: @unchecked Sendable {
             let primaryFrame = primary!
             let secondaryFrame = secondary!
             compositeFrameCount += 1
-            if compositeFrameCount <= 5 || compositeFrameCount % 60 == 0 {
-                print("FrameCompositor: composite #\(compositeFrameCount) PTS=\(pts.seconds) valid=\(pts.isValid)")
-            }
+            let loggedFrameCount = compositeFrameCount
             lock.unlock()
+
+            // Log outside the lock — a blocking stdout write must not stall the
+            // capture-push threads that contend for it.
+            if loggedFrameCount <= 5 || loggedFrameCount % 60 == 0 {
+                print("FrameCompositor: composite #\(loggedFrameCount) PTS=\(pts.seconds) valid=\(pts.isValid)")
+            }
 
             let compositeBuffer = composite(
                 primary: primaryFrame,

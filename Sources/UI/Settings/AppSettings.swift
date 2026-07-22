@@ -166,6 +166,8 @@ public enum AppSettings {
     public static var captureSystemAudio: Bool { Defaults[.captureSystemAudio] }
     public static var captureMicrophone: Bool { Defaults[.captureMicrophone] }
     public static var mergeAudioTracks: Bool { Defaults[.mergeAudioTracks] }
+    public static var sessionRecordingSystemAudio: Bool { Defaults[.sessionRecordingSystemAudio] }
+    public static var sessionRecordingMicrophone: Bool { Defaults[.sessionRecordingMicrophone] }
     public static var playAudioCueOnSave: Bool { Defaults[.playAudioCueOnSave] }
     public static var showNotificationOnSave: Bool { Defaults[.showNotificationOnSave] }
     public static var clipFilenameTemplate: String { Defaults[.clipFilenameTemplate] }
@@ -326,6 +328,13 @@ public extension Defaults.Keys {
     static let excludeOwnAppAudio = Key<Bool>("excludeOwnAppAudio", default: true)
     static let perAppAudioEnabled = Key<Bool>("perAppAudioEnabled", default: false)
     static let perAppAudioBundleID = Key<String>("perAppAudioBundleID", default: "")
+
+    // Screen Recording — the continuous recorder's own audio selection, kept
+    // independent from the replay buffer's captureSystemAudio/captureMicrophone.
+    // Snapshot at recording start (not observed live), so a mid-recording change
+    // applies to the next recording.
+    static let sessionRecordingSystemAudio = Key<Bool>("sessionRecordingSystemAudio", default: true)
+    static let sessionRecordingMicrophone = Key<Bool>("sessionRecordingMicrophone", default: false)
 
     static let memoryCapMB = Key<Double>("memoryCapMB", default: 1536)
     static let queueDepth = Key<Int>("queueDepth", default: 5)
